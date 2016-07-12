@@ -1,0 +1,13 @@
+spring:
+  main:
+    web-environment: false
+  cloud:
+    stream:
+      bindings:
+        output:
+          destination: example
+        input:
+          destination: example
+  # Necessary for integration testing multiple ApplicationContexts.
+  jmx:
+    enabled: false
