@@ -7,8 +7,9 @@ public abstract class SpringBinderIntegrationTest {
     }
 
     public void waitFor(int millis, Runnable assertion) throws InterruptedException {
+        long endTime = System.currentTimeMillis() + millis;
+
         while (true) {
-            long endTime = System.currentTimeMillis() + millis;
             try {
                 assertion.run();
                 return;
