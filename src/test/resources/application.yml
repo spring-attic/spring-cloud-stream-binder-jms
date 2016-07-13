@@ -11,3 +11,6 @@ spring:
   # Necessary for integration testing multiple ApplicationContexts.
   jmx:
     enabled: false
+  activemq:
+    in-memory: false
+#    broker-url: 'tcp://localhost:61616' this is the default for non-in-memory
