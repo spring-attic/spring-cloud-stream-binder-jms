@@ -10,14 +10,14 @@ import java.util.List;
 @Component
 public class Greeter {
 
-    private final List<String> messages = new ArrayList<>();
+    private final List<Object> messages = new ArrayList<>();
 
     @StreamListener(Sink.INPUT)
     public void greet(Object message) {
-        messages.add(message.toString());
+        messages.add(message);
     }
 
-    public List<String> getReceivedMessages() {
+    public List<Object> getReceivedMessages() {
         return messages;
     }
 }

@@ -16,8 +16,8 @@ public class Announcer {
         this.source = source;
     }
 
-    public void announce(String name) {
-        Message message = MessageBuilder.withPayload(name).build();
+    public void announce(Object something) {
+        Message message = MessageBuilder.withPayload(something).build();
         source.output().send(message);
     }
 }

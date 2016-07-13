@@ -1,3 +1,4 @@
+import org.springframework.core.serializer.support.DeserializingConverter;
 import org.springframework.integration.endpoint.MessageProducerSupport;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -10,6 +11,7 @@ class SimpleConsumer extends MessageProducerSupport implements MessageListener {
     private Session session;
     private String queueName;
     private MessageConsumer consumer;
+    private DeserializingConverter converter = new DeserializingConverter();
 
     SimpleConsumer(Connection connection, String name) {
         this.connection = connection;
@@ -46,9 +48,13 @@ class SimpleConsumer extends MessageProducerSupport implements MessageListener {
 
     @Override
     public void onMessage(javax.jms.Message message) {
-        TextMessage txtMessage = (TextMessage) message;
         try {
-            Message<String> outboundMessage = MessageBuilder.withPayload(txtMessage.getText()).build();
+            BytesMessage bytesMessage = (BytesMessage) message;
+            long bodyLength = bytesMessage.getBodyLength();
+            byte[] bytes = new byte[(int) bodyLength];
+            bytesMessage.readBytes(bytes);
+            Object result = converter.convert(bytes);
+            Message<?> outboundMessage = MessageBuilder.withPayload(result).build();
             this.sendMessage(outboundMessage);
         } catch (JMSException e) {
             logger.error(String.format("JMS Error reading consumer message: %s", e.getMessage()), e);
