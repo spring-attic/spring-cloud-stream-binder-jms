@@ -15,7 +15,6 @@ public class Greeter {
     @StreamListener(Sink.INPUT)
     public void greet(Object message) {
         messages.add(message.toString());
-        System.out.println(String.format("Hello %s", message));
     }
 
     public List<String> getReceivedMessages() {
