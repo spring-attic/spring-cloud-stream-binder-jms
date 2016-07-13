@@ -1,3 +1,4 @@
+import org.springframework.core.serializer.support.SerializingConverter;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
@@ -8,6 +9,7 @@ class SimpleHandler implements MessageHandler {
 
     private final Session session;
     private MessageProducer producer;
+    private SerializingConverter converter = new SerializingConverter();
 
     SimpleHandler(Connection connection, String name) throws JMSException {
         this.session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -18,8 +20,10 @@ class SimpleHandler implements MessageHandler {
     @Override
     public void handleMessage(Message<?> message) throws MessagingException {
         try {
-            TextMessage textMessage = session.createTextMessage(message.getPayload().toString());
-            this.producer.send(textMessage);
+            BytesMessage bytesMessage = session.createBytesMessage();
+            byte[] output = converter.convert(message.getPayload());
+            bytesMessage.writeBytes(output);
+            this.producer.send(bytesMessage);
         } catch (JMSException e) {
             throw new MessagingException("JMS error forwarding message ", e);
         }

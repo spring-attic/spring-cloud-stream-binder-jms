@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
@@ -37,15 +38,17 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
     public void sinkReceivesMessages() throws Exception {
         Announcer announcer = announcerContext.getBean(Announcer.class);
 
+        LocalDateTime now = LocalDateTime.now();
+
         announcer.announce("Joseph");
         announcer.announce("Jack");
+        announcer.announce(now);
 
         Greeter greeter = greeterContext.getBean(Greeter.class);
-        List<String> messages = greeter.getReceivedMessages();
+        List<Object> messages = greeter.getReceivedMessages();
 
         waitFor(() -> {
-            assertThat(messages, hasSize(2));
-            assertThat(messages, containsInAnyOrder("Joseph", "Jack"));
+            assertThat(messages, containsInAnyOrder("Joseph", "Jack", now));
         });
     }
 
