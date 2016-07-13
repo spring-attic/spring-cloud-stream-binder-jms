@@ -4,32 +4,25 @@ import org.springframework.messaging.MessagingException;
 
 import javax.jms.*;
 
-/**
- * Created by pivotal on 12/07/2016.
- */
 class SimpleHandler implements MessageHandler {
 
-    private ConnectionFactory factory;
+    private final Session session;
+    private MessageProducer producer;
 
-    SimpleHandler(ConnectionFactory factory) {
-        this.factory = factory;
+    SimpleHandler(Connection connection, String name) throws JMSException {
+        this.session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue(name);
+        this.producer = session.createProducer(queue);
     }
 
     @Override
     public void handleMessage(Message<?> message) throws MessagingException {
         try {
-            Connection producerConnection = factory.createConnection();
-            try {
-                Session session = producerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-                Queue queue = session.createQueue("test.queue");
-                MessageProducer producer = session.createProducer(queue);
-                javax.jms.Message msg = session.createTextMessage(message.getPayload().toString());
-                producer.send(msg);
-            } finally {
-                producerConnection.close();
-            }
+            TextMessage textMessage = session.createTextMessage(message.getPayload().toString());
+            this.producer.send(textMessage);
         } catch (JMSException e) {
-            e.printStackTrace();
+            throw new MessagingException("JMS error forwarding message ", e);
         }
     }
+
 }
