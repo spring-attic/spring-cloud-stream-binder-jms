@@ -1,20 +1,25 @@
-import org.apache.activemq.ActiveMQConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.binder.*;
 import org.springframework.integration.endpoint.AbstractEndpoint;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
 import org.springframework.integration.endpoint.MessageProducerSupport;
-import org.springframework.messaging.*;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.stereotype.Component;
 
-import javax.jms.*;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
 
 @Component
-public class JMSBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
+public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
 
     private Connection consumerConnection;
     private Connection producerConnection;
 
-    public JMSBinder(ConnectionFactory factory) throws JMSException {
+    public JMSMessageChannelBinder(ConnectionFactory factory) throws JMSException {
         this.consumerConnection = factory.createConnection();
         this.producerConnection = factory.createConnection();
         consumerConnection.start();
