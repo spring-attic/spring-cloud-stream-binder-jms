@@ -1,5 +1,11 @@
 package integration;
 
+import org.springframework.messaging.Message;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public abstract class SpringBinderIntegrationTest {
 
     public void waitFor(Runnable assertion) throws InterruptedException {
@@ -22,4 +28,20 @@ public abstract class SpringBinderIntegrationTest {
         }
     }
 
+    List<? extends Object> extractPayload(List<Message> messages) {
+        return messages.stream().map(Message::getPayload).collect(Collectors.toList());
+    }
+
+    public static class SerializableTest implements Serializable {
+        public final String value;
+
+        public SerializableTest(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return "SerializableTest<" + value + ">";
+        }
+    }
 }

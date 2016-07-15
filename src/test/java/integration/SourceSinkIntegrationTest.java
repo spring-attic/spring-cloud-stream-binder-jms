@@ -12,13 +12,10 @@ import org.junit.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.MessageBuilder;
 
-import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
+import static greetings.Greeter.PLEASE_THROW_AN_EXCEPTION;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
@@ -64,8 +61,8 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
 
         Greeter greeter2 = greeterContext2.getBean(Greeter.class);
 
-        List<Message> otherReceivedMessages = greeter2.getReceivedMessages();
-        List<Message> messages = greeter.getReceivedMessages();
+        List<Message> otherReceivedMessages = greeter2.getHandledMessages();
+        List<Message> messages = greeter.getHandledMessages();
 
         waitFor(() -> {
             assertThat(extractPayload(messages), containsInAnyOrder("Joseph", "Jack", 123, Arrays.asList("hi", "world")));
@@ -80,7 +77,7 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
         announcer.announce("Joseph", ImmutableMap.of("holy", "header"));
 
         Greeter greeter = greeterContext.getBean(Greeter.class);
-        List<Message> messages = greeter.getReceivedMessages();
+        List<Message> messages = greeter.getHandledMessages();
 
         waitFor(() -> assertThat(messages, contains(
                 allOf(
@@ -88,6 +85,23 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
                     hasProperty("headers", hasEntry("holy", "header"))
                 )
         )));
+
+    }
+
+    @Test
+    public void retriesByDefault() throws Exception {
+        Announcer announcer = announcerContext.getBean(Announcer.class);
+
+        announcer.announce(PLEASE_THROW_AN_EXCEPTION);
+
+        Greeter greeter = greeterContext.getBean(Greeter.class);
+        List<Message> receivedMessages = greeter.getReceivedMessages();
+        List<Message> handledMessages = greeter.getHandledMessages();
+
+        waitFor(() -> {
+            assertThat(extractPayload(receivedMessages), contains(PLEASE_THROW_AN_EXCEPTION, PLEASE_THROW_AN_EXCEPTION));
+            assertThat(extractPayload(handledMessages), empty());
+        });
 
     }
 
@@ -101,8 +115,8 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
         Greeter greeter = greeterContext.getBean(Greeter.class);
         Greeter greeter2 = greeterContext2.getBean(Greeter.class);
 
-        List<Message> otherReceivedMessages = greeter2.getReceivedMessages();
-        List<Message> messages = greeter.getReceivedMessages();
+        List<Message> otherReceivedMessages = greeter2.getHandledMessages();
+        List<Message> messages = greeter.getHandledMessages();
 
         waitFor(() -> {
             assertThat(extractPayload(messages), containsInAnyOrder(serializableTest));
@@ -110,20 +124,5 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
         });
     }
 
-    private List<? extends Object> extractPayload(List<Message> messages) {
-        return messages.stream().map(Message::getPayload).collect(Collectors.toList());
-    }
 
-    public static class SerializableTest implements Serializable {
-        public final String value;
-
-        public SerializableTest(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return "SerializableTest<" + value + ">";
-        }
-    }
 }

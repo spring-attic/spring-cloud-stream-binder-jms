@@ -1,3 +1,6 @@
+import org.aopalliance.aop.Advice;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.cloud.stream.binder.*;
 import org.springframework.integration.endpoint.AbstractEndpoint;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
@@ -9,16 +12,22 @@ import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.SubscribableChannel;
+import org.springframework.retry.RetryCallback;
+import org.springframework.retry.RetryContext;
+import org.springframework.retry.interceptor.MethodInvocationRecoverer;
+import org.springframework.retry.interceptor.RetryInterceptorBuilder;
+import org.springframework.retry.interceptor.RetryOperationsInterceptor;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
+import javax.jms.*;
 
 public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
 
     private BindingFactory bindingFactory;
     private JmsTemplate template;
     private ListenerContainerFactory listenerContainerFactory;
+    protected final Log logger = LogFactory.getLog(this.getClass());
 
     public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template) throws JMSException {
         this(new ListenerContainerFactory(factory), new BindingFactory(), template);
@@ -36,7 +45,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     @Override
     protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputTarget, ConsumerProperties properties) {
         AbstractMessageListenerContainer listenerContainer = listenerContainerFactory.build(name);
-        DefaultBinding<MessageChannel> binding = bindingFactory.build(name, group, inputTarget, listenerContainer);
+        DefaultBinding<MessageChannel> binding = bindingFactory.build(name, group, inputTarget, listenerContainer, buildRetryTemplateIfRetryEnabled(properties));
         return binding;
     }
 
@@ -82,8 +91,25 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
 
     public static class BindingFactory {
 
-        public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel inputTarget, AbstractMessageListenerContainer listenerContainer) {
-            ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener();
+        public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel inputTarget, AbstractMessageListenerContainer listenerContainer, RetryTemplate retryTemplate) {
+            ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener(){
+                @Override
+                public void onMessage(Message jmsMessage, Session session) throws JMSException {
+                    if (retryTemplate == null) {
+                        super.onMessage(jmsMessage, session);
+                    }
+                    else {
+                        retryTemplate.execute(retryContext -> {
+                            try {
+                                super.onMessage(jmsMessage, session);
+                            } catch (JMSException e) {
+                                logger.error("Failed to send message", e);
+                            }
+                            return null;
+                        });
+                    }
+                }
+            };
             listener.setRequestChannel(inputTarget);
 
             AbstractEndpoint endpoint = new JmsMessageDrivenEndpoint(listenerContainer, listener);
