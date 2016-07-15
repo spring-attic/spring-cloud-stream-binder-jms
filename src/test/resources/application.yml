@@ -8,6 +8,7 @@ spring:
           destination: example
         input:
           destination: example
+
   # Necessary for integration testing multiple ApplicationContexts.
   jmx:
     enabled: false

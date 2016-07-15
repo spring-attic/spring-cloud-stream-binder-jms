@@ -6,6 +6,9 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
 public class Announcer {
 
@@ -17,7 +20,13 @@ public class Announcer {
     }
 
     public void announce(Object something) {
-        Message message = MessageBuilder.withPayload(something).build();
+        announce(something, new HashMap<>());
+    }
+
+    public void announce(Object something, Map<String, Object> headers) {
+        MessageBuilder<Object> builder = MessageBuilder.withPayload(something);
+        headers.entrySet().forEach(s -> builder.setHeader(s.getKey(), s.getValue()));
+        Message message = builder.build();
         source.output().send(message);
     }
 }
