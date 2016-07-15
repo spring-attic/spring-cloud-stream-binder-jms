@@ -11,14 +11,27 @@ import java.util.List;
 @Component
 public class Greeter {
 
-    private final List<Message> messages = new ArrayList<>();
+    public static final String PLEASE_THROW_AN_EXCEPTION = "Please throw an exception";
+    private final List<Message> handledMessages = new ArrayList<>();
+
+    private final List<Message> receivedMessages = new ArrayList<>();
 
     @StreamListener(Sink.INPUT)
     public void greet(Message message) {
-        messages.add(message);
+        receivedMessages.add(message);
+
+        if (message.getPayload().equals(PLEASE_THROW_AN_EXCEPTION)) {
+            throw new RuntimeException("Your wish is my command");
+        }
+
+        handledMessages.add(message);
+    }
+
+    public List<Message> getHandledMessages() {
+        return handledMessages;
     }
 
     public List<Message> getReceivedMessages() {
-        return messages;
+        return receivedMessages;
     }
 }

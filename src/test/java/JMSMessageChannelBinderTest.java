@@ -10,6 +10,7 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.jms.Connection;
@@ -39,6 +40,7 @@ public class JMSMessageChannelBinderTest {
         JMSMessageChannelBinder target = new JMSMessageChannelBinder(listenerContainerFactory, bindingFactory, null);
         ConsumerProperties properties = new ConsumerProperties();
         MessageChannel inputTarget = new DirectChannel();
+        RetryTemplate retryTemplate = new RetryTemplate();
 
         AbstractMessageListenerContainer listenerContainer = mock(AbstractMessageListenerContainer.class);
         when(listenerContainerFactory.build(anyString())).thenReturn(listenerContainer);
@@ -46,7 +48,7 @@ public class JMSMessageChannelBinderTest {
         target.doBindConsumer("whatever", "group", inputTarget, properties);
 
         verify(listenerContainerFactory, times(1)).build("whatever");
-        verify(bindingFactory, times(1)).build("whatever", "group", inputTarget, listenerContainer);
+        verify(bindingFactory, times(1)).build("whatever", "group", inputTarget, listenerContainer, retryTemplate);
     }
 
     @Test
