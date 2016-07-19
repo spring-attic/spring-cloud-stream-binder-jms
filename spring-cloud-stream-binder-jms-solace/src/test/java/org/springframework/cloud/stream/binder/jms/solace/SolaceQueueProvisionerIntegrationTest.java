@@ -1,11 +1,14 @@
 package org.springframework.cloud.stream.binder.jms.solace;
 
 import com.solacesystems.jcsmp.*;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
@@ -13,148 +16,72 @@ import static org.junit.Assert.*;
 
 public class SolaceQueueProvisionerIntegrationTest {
 
+    private SolaceQueueProvisioner solaceQueueProvisioner;
+    private JCSMPSession session;
+    private XMLMessageProducer messageProducer;
+    private Topic topic;
+
+    @Before
+    public void setUp() throws Exception {
+        this.solaceQueueProvisioner = new SolaceQueueProvisioner();
+        this.session = createSession();
+        this.messageProducer = session.getMessageProducer(new MessageProducerVoidEventHandler());
+        this.topic = JCSMPFactory.onlyInstance().createTopic(getRandomName("topic"));
+    }
+
+    @Test
+    public void provision_whenSingleMessageAndSingleConsumer_shouldReceiveTheMessage() throws Exception {
+        String consumerGroupName = getRandomName("consumerGroup");
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
+
+        messageProducer.send(createMessage("hello jimmy"), topic);
+        CountingListener countingListener = listenToQueue(consumerGroupName);
+
+        countingListener.awaitExpectedMessages();
+
+        assertThat(countingListener.getErrors(), empty());
+        assertThat(countingListener.getMessages(), contains("hello jimmy"));
+    }
+
     /**
      * As discussed in slack, topics do not persist messages, so messages sent to topics without consumers
      * will never be seen (Required Groups can specified to provision consumer at the same time as the topic).
+     *
      * @throws Exception
      */
     @Test
-    public void whenTopicProvisionedWithoutConsumers_itShouldDiscardMessages() throws Exception {
-        JCSMPSession session = createSession();
-
+    public void provision_whenTopicProvisionedWithoutConsumers_itShouldDiscardMessages() throws Exception {
         //provision just the topic
-        SolaceQueueProvisioner solaceQueueProvisioner = new SolaceQueueProvisioner();
-        String topicName = getRandomName("topic");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, null);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), null);
 
-        //send some messages to the topic
+        messageProducer.send(createMessage("hello jimmy"), topic);
 
-        BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
-        message.setDeliveryMode(DeliveryMode.PERSISTENT);
-
-        message.setUserData("hello jimmy".getBytes());
-        message.writeAttachment("i am an attachment".getBytes());
-        XMLMessageProducer messageProducer = session.getMessageProducer(new PrintingPubCallback());
-
-        Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
-        messageProducer.send(message, topic);
-
-        //now create the consumer group
         String consumerGroupName = getRandomName("consumerGroup");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroupName);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
-        //now try to read some messages
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
+        CountingListener countingListener = listenToQueue(consumerGroupName);
 
-        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
-        consumerFlowProperties.setEndpoint(queue);
-
-        CountingListener countingListener = new CountingListener();
-        FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
-        consumer.start();
-
-        Thread.sleep(2000);
+        Thread.sleep(2000); // We assume 2 seconds as a sensible time to be confident no messages will be received.
         assertThat(countingListener.getErrors(), empty());
         assertThat(countingListener.getMessages(), empty());
     }
 
     @Test
-    public void whenASecondSubscriptionIsAdded_itGetsSubsequentMessages() throws Exception {
-        SolaceQueueProvisioner solaceQueueProvisioner = new SolaceQueueProvisioner();
-        String topicName = getRandomName("topic");
-
-        String consumerGroup1Name = getRandomName("consumerGroup1");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroup1Name);
-
-        JCSMPSession session = createSession();
-
-        BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
-        message.setDeliveryMode(DeliveryMode.PERSISTENT);
-
-        message.setUserData("message one".getBytes());
-        message.writeAttachment("i am an attachment".getBytes());
-        XMLMessageProducer messageProducer = session.getMessageProducer(new PrintingPubCallback());
-
-        Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
-        messageProducer.send(message, topic);
-
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroup1Name);
-
-        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
-        consumerFlowProperties.setEndpoint(queue);
-
-        CountingListener countingListener = new CountingListener();
-        FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
-        consumer.start();
-
-        String consumerGroup2Name = getRandomName("consumerGroup2");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroup2Name);
-
-        BytesXMLMessage messageTwo = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
-        messageTwo.setDeliveryMode(DeliveryMode.PERSISTENT);
-
-        messageTwo.setUserData("message two".getBytes());
-        messageTwo.writeAttachment("i am an attachment".getBytes());
-        messageProducer.send(messageTwo, topic);
-
-        Queue queue2 = JCSMPFactory.onlyInstance().createQueue(consumerGroup2Name);
-
-        ConsumerFlowProperties consumerFlow2Properties = new ConsumerFlowProperties();
-        consumerFlow2Properties.setEndpoint(queue2);
-
-        CountingListener countingListener2 = new CountingListener();
-        FlowReceiver consumer2 = session.createFlow(countingListener2, consumerFlow2Properties);
-        consumer2.start();
-
-        Thread.sleep(2000);
-        assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getMessages(), contains("message one", "message two"));
-
-        assertThat(countingListener2.getErrors(), empty());
-        assertThat(countingListener2.getMessages(), contains("message two"));
-    }
-
-    @Test
-    public void whenMultipleSubscriptionsArePresent_allGroupsReceiveAllMessages() throws Exception {
-        SolaceQueueProvisioner solaceQueueProvisioner = new SolaceQueueProvisioner();
-        String topicName = getRandomName("topic");
+    public void provision_whenMultipleSubscriptionsArePresent_allGroupsReceiveAllMessages() throws Exception {
         String consumerGroup1Name = getRandomName("consumerGroup1");
         String consumerGroup2Name = getRandomName("consumerGroup2");
 
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroup1Name);
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroup2Name);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup1Name);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup2Name);
 
-        JCSMPSession session = createSession();
+        messageProducer.send(createMessage("hello jimmy"), topic);
 
-        BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
-        message.setDeliveryMode(DeliveryMode.PERSISTENT);
+        CountingListener countingListener = listenToQueue(consumerGroup1Name);
+        CountingListener countingListener2 = listenToQueue(consumerGroup2Name);
 
-        message.setUserData("hello jimmy".getBytes());
-        message.writeAttachment("i am an attachment".getBytes());
-        XMLMessageProducer messageProducer = session.getMessageProducer(new PrintingPubCallback());
+        countingListener.awaitExpectedMessages();
+        countingListener2.awaitExpectedMessages();
 
-        Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
-        messageProducer.send(message, topic);
-
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroup1Name);
-
-        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
-        consumerFlowProperties.setEndpoint(queue);
-
-        CountingListener countingListener = new CountingListener();
-        FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
-        consumer.start();
-
-        Queue queue2 = JCSMPFactory.onlyInstance().createQueue(consumerGroup2Name);
-
-        ConsumerFlowProperties consumerFlow2Properties = new ConsumerFlowProperties();
-        consumerFlow2Properties.setEndpoint(queue2);
-
-        CountingListener countingListener2 = new CountingListener();
-        FlowReceiver consumer2 = session.createFlow(countingListener2, consumerFlow2Properties);
-        consumer2.start();
-
-        Thread.sleep(2000);
         assertThat(countingListener.getErrors(), empty());
         assertThat(countingListener.getMessages(), contains("hello jimmy"));
 
@@ -163,37 +90,51 @@ public class SolaceQueueProvisionerIntegrationTest {
     }
 
     @Test
-    public void provision() throws Exception {
-        SolaceQueueProvisioner solaceQueueProvisioner = new SolaceQueueProvisioner();
-        String topicName = getRandomName("topic");
-        String consumerGroupName = getRandomName("consumerGroup");
+    public void provision_whenASecondSubscriptionIsAdded_itGetsSubsequentMessages() throws Exception {
+        String firstConsumerGroup = getRandomName("consumerGroup1");
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), firstConsumerGroup);
 
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topicName, consumerGroupName);
+        messageProducer.send(createMessage("message one"), topic);
+        CountingListener countingListener = listenToQueue(firstConsumerGroup, 2);
 
-        JCSMPSession session = createSession();
+        String secondConsumerGroup = getRandomName("consumerGroup2");
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), secondConsumerGroup);
 
-        BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
-        message.setDeliveryMode(DeliveryMode.PERSISTENT);
+        messageProducer.send(createMessage("message two"), topic);
+        CountingListener countingListener2 = listenToQueue(secondConsumerGroup);
 
-        message.setUserData("hello jimmy".getBytes());
-        message.writeAttachment("i am an attachment".getBytes());
-        XMLMessageProducer messageProducer = session.getMessageProducer(new PrintingPubCallback());
+        countingListener.awaitExpectedMessages();
+        countingListener2.awaitExpectedMessages();
 
-        Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
-        messageProducer.send(message, topic);
+        assertThat(countingListener.getErrors(), empty());
+        assertThat(countingListener.getMessages(), contains("message one", "message two"));
 
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
+        assertThat(countingListener2.getErrors(), empty());
+        assertThat(countingListener2.getMessages(), contains("message two"));
+    }
+
+    private CountingListener listenToQueue(String queueName) throws JCSMPException {
+        return listenToQueue(queueName, 1);
+    }
+
+    private CountingListener listenToQueue(String queueName, int expectedMessages) throws JCSMPException {
+        Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
 
         ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
         consumerFlowProperties.setEndpoint(queue);
 
-        CountingListener countingListener = new CountingListener();
+        CountingListener countingListener = new CountingListener(expectedMessages);
         FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
         consumer.start();
+        return countingListener;
+    }
 
-        Thread.sleep(2000);
-        assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getMessages(), contains("hello jimmy"));
+    private BytesXMLMessage createMessage(String userData) {
+        BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
+        message.setDeliveryMode(DeliveryMode.PERSISTENT);
+        message.setUserData(userData.getBytes());
+        message.writeAttachment("i am an attachment".getBytes());
+        return message;
     }
 
     private String getRandomName(String prefix) {
@@ -202,21 +143,28 @@ public class SolaceQueueProvisionerIntegrationTest {
 
     private JCSMPSession createSession() throws InvalidPropertiesException {
         JCSMPProperties properties = new JCSMPProperties();
-        properties.setProperty("host", "192.168.99.100");
         properties.setProperty("username", "admin");
         properties.setProperty("password", "admin");
+        properties.setProperty("host", "192.168.99.100");
 
         return JCSMPFactory.onlyInstance().createSession(properties);
     }
 
     private class CountingListener implements XMLMessageListener {
-        private List<JCSMPException> errors = new ArrayList<>();
+        private final CountDownLatch latch;
 
-        private List<String> messages = new ArrayList<>();
+        private final List<JCSMPException> errors = new ArrayList<>();
+
+        private final List<String> messages = new ArrayList<>();
+
+        private CountingListener(int expectedMessages) {
+            this.latch = new CountDownLatch(expectedMessages);
+        }
 
         @Override
         public void onReceive(BytesXMLMessage bytesXMLMessage) {
             messages.add(new String(bytesXMLMessage.getUserData()));
+            latch.countDown();
         }
 
         @Override
@@ -224,25 +172,28 @@ public class SolaceQueueProvisionerIntegrationTest {
             errors.add(e);
         }
 
+        void awaitExpectedMessages() throws InterruptedException {
+            latch.await(2, TimeUnit.SECONDS);
+        }
+
         List<JCSMPException> getErrors() {
             return errors;
         }
 
-        public List<String> getMessages() {
+        List<String> getMessages() {
             return messages;
         }
     }
 
-    private class PrintingPubCallback implements JCSMPStreamingPublishEventHandler {
-        public void handleError(String messageID, JCSMPException cause, long timestamp) {
-            System.err.println("Error occurred for message: " + messageID);
-            cause.printStackTrace();
+    private class MessageProducerVoidEventHandler implements JCSMPStreamingPublishEventHandler {
+        @Override
+        public void handleError(String id, JCSMPException e, long timestamp) {
+            System.err.println(String.format("Error in message producer for message id: '%s' at timestamp %d", id, timestamp));
+            e.printStackTrace();
         }
 
-        // This method is only invoked for persistent and non-persistent
-        // messages.
         public void responseReceived(String messageID) {
-            System.out.println("Response received for message: " + messageID);
+            //do nothing
         }
     }
 }
