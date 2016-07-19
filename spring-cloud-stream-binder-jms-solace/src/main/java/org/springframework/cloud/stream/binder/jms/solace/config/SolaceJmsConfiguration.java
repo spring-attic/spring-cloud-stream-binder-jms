@@ -4,6 +4,8 @@ import com.solacesystems.jms.SolConnectionFactoryImpl;
 import com.solacesystems.jms.property.JMSProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,6 +25,11 @@ public class SolaceJmsConfiguration {
         solConnectionFactory.setProperty("Username", config.getUsername());
         solConnectionFactory.setProperty("Password", config.getPassword());
         return solConnectionFactory;
+    }
+
+    @Bean
+    public QueueProvisioner solaceQueueProvisioner() {
+        return new SolaceQueueProvisioner();
     }
 
 }

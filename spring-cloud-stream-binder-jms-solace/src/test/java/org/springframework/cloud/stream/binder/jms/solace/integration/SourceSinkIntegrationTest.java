@@ -30,8 +30,8 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
 
     @Before
     public void setUp() {
-        greeterContext = SpringApplication.run(GreeterApplication.class);
-        greeterContext2 = SpringApplication.run(GreeterApplication.class);
+        greeterContext = SpringApplication.run(GreeterApplication.class,"--spring.cloud.stream.bindings.input.group=y");
+        greeterContext2 = SpringApplication.run(GreeterApplication.class,"--spring.cloud.stream.bindings.input.group=x");
         announcerContext = SpringApplication.run(AnnouncerApplication.class);
     }
 

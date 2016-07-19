@@ -9,8 +9,8 @@ import javax.jms.JMSException;
 public class JMSChannelBinderConfiguration {
 
     @Bean
-    JMSMessageChannelBinder jmsMessageChannelBinder(JmsTemplate template, ConnectionFactory connectionFactory) throws JMSException {
-        return new JMSMessageChannelBinder(connectionFactory, template);
+    JMSMessageChannelBinder jmsMessageChannelBinder(JmsTemplate template, ConnectionFactory connectionFactory, QueueProvisioner queueProvisioner) throws JMSException {
+        return new JMSMessageChannelBinder(connectionFactory, template, queueProvisioner);
     }
 
 }

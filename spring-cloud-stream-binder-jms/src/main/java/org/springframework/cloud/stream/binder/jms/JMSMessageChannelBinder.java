@@ -29,16 +29,18 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     private BindingFactory bindingFactory;
     private JmsTemplate template;
     private ListenerContainerFactory listenerContainerFactory;
+    private QueueProvisioner queueProvisioner;
     protected final Log logger = LogFactory.getLog(this.getClass());
 
-    public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template) throws JMSException {
-        this(new ListenerContainerFactory(factory), new BindingFactory(), template);
+    public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template, QueueProvisioner queueProvisioner) throws JMSException {
+        this(new ListenerContainerFactory(factory), new BindingFactory(), template, queueProvisioner);
     }
 
-    public JMSMessageChannelBinder(ListenerContainerFactory listenerContainerFactory, BindingFactory bindingFactory, JmsTemplate template) throws JMSException {
+    public JMSMessageChannelBinder(ListenerContainerFactory listenerContainerFactory, BindingFactory bindingFactory, JmsTemplate template, QueueProvisioner queueProvisioner) throws JMSException {
         this.bindingFactory = bindingFactory;
         this.template = template;
         this.listenerContainerFactory = listenerContainerFactory;
+        this.queueProvisioner = queueProvisioner;
     }
 
     /**
@@ -46,7 +48,8 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
      */
     @Override
     protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputTarget, ConsumerProperties properties) {
-        AbstractMessageListenerContainer listenerContainer = listenerContainerFactory.build(name);
+        queueProvisioner.provisionTopicAndConsumerGroup(name, group);
+        AbstractMessageListenerContainer listenerContainer = listenerContainerFactory.build(group);
         DefaultBinding<MessageChannel> binding = bindingFactory.build(name, group, inputTarget, listenerContainer, buildRetryTemplateIfRetryEnabled(properties));
         return binding;
     }
@@ -56,6 +59,8 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
      */
     @Override
     protected Binding<MessageChannel> doBindProducer(String name, MessageChannel outboundBindTarget, ProducerProperties properties) {
+        queueProvisioner.provisionTopicAndConsumerGroup(name, null);
+
         template.setPubSubDomain(true);
 
         JmsSendingMessageHandler handler = new JmsSendingMessageHandler(template);
@@ -84,7 +89,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         public AbstractMessageListenerContainer build(String name) {
             AbstractMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
             listenerContainer.setDestinationName(name);
-            listenerContainer.setPubSubDomain(true);
+            listenerContainer.setPubSubDomain(false);
             listenerContainer.setConnectionFactory(factory);
             return listenerContainer;
         }
