@@ -46,7 +46,7 @@ public class JMSMessageChannelBinderTest {
 
         target.doBindConsumer("whatever", "group", inputTarget, properties);
 
-        verify(listenerContainerFactory, times(1)).build("whatever");
+        verify(listenerContainerFactory, times(1)).build("group");
         verify(bindingFactory, times(1)).build(eq("whatever"), eq("group"), eq(inputTarget), eq(listenerContainer), any(RetryTemplate.class));
     }
 
@@ -59,7 +59,7 @@ public class JMSMessageChannelBinderTest {
 
         assertThat(messageListenerContainer.getDestinationName(), is("my channel"));
         assertThat(messageListenerContainer.getConnectionFactory(), is(factory));
-        assertThat(getField(messageListenerContainer, "pubSubDomain"), is(true));
+        assertThat(getField(messageListenerContainer, "pubSubDomain"), is(false));
     }
 
 
@@ -76,10 +76,10 @@ public class JMSMessageChannelBinderTest {
         when(connectionFactory.createConnection()).thenReturn(connection);
 
         JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(connectionFactory, jmsTemplate, queueProvisioner);
-        DefaultBinding<MessageChannel> messageChannelBinding = (DefaultBinding<MessageChannel>) jmsMessageChannelBinder.doBindConsumer("my channel", "", inputTarget, new ConsumerProperties());
+        DefaultBinding<MessageChannel> messageChannelBinding = (DefaultBinding<MessageChannel>) jmsMessageChannelBinder.doBindConsumer("my channel", "my group", inputTarget, new ConsumerProperties());
         JmsMessageDrivenEndpoint endpoint = (JmsMessageDrivenEndpoint) getField(messageChannelBinding, "endpoint");
         SimpleMessageListenerContainer listenerContainer = (SimpleMessageListenerContainer) getField(endpoint, "listenerContainer");
 
-        assertThat(listenerContainer.getDestinationName(), is("my channel"));
+        assertThat(listenerContainer.getDestinationName(), is("my group"));
     }
 }

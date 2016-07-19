@@ -2,7 +2,12 @@ package org.springframework.cloud.stream.binder.jms.solace.config;
 
 import com.solacesystems.jms.SolConnectionFactoryImpl;
 import com.solacesystems.jms.property.JMSProperties;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration;
+import org.springframework.boot.autoconfigure.jms.JndiConnectionFactoryAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
@@ -13,6 +18,10 @@ import javax.jms.ConnectionFactory;
 import java.util.Hashtable;
 
 @Configuration
+@AutoConfigureBefore(JmsAutoConfiguration.class)
+@AutoConfigureAfter({ JndiConnectionFactoryAutoConfiguration.class })
+@ConditionalOnClass({ ConnectionFactory.class, SolConnectionFactoryImpl.class })
+@ConditionalOnMissingBean(ConnectionFactory.class)
 @EnableConfigurationProperties(SolaceConfigurationProperties.class)
 public class SolaceJmsConfiguration {
 

@@ -1,2 +1,2 @@
-#org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-#org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration
