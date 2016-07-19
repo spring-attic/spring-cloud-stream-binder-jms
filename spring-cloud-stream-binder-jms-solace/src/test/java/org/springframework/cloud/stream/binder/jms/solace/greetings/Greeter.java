@@ -1,4 +1,4 @@
-package org.springframework.cloud.stream.binder.jms.greetings;
+package org.springframework.cloud.stream.binder.jms.solace.greetings;
 
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Sink;

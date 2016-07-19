@@ -1,10 +1,11 @@
-package org.springframework.cloud.stream.binder.jms.integration;
+package org.springframework.cloud.stream.binder.jms.solace.integration;
 
-import org.springframework.cloud.stream.binder.jms.announcements.Announcer;
-import org.springframework.cloud.stream.binder.jms.announcements.AnnouncerApplication;
+import org.hamcrest.Matchers;
+import org.springframework.cloud.stream.binder.jms.solace.announcements.Announcer;
+import org.springframework.cloud.stream.binder.jms.solace.announcements.AnnouncerApplication;
 import com.google.common.collect.ImmutableMap;
-import org.springframework.cloud.stream.binder.jms.greetings.Greeter;
-import org.springframework.cloud.stream.binder.jms.greetings.GreeterApplication;
+import org.springframework.cloud.stream.binder.jms.solace.greetings.Greeter;
+import org.springframework.cloud.stream.binder.jms.solace.greetings.GreeterApplication;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -15,7 +16,6 @@ import org.springframework.messaging.Message;
 
 import java.util.*;
 
-import static org.springframework.cloud.stream.binder.jms.greetings.Greeter.PLEASE_THROW_AN_EXCEPTION;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
@@ -92,14 +92,14 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
     public void retriesByDefault() throws Exception {
         Announcer announcer = announcerContext.getBean(Announcer.class);
 
-        announcer.announce(PLEASE_THROW_AN_EXCEPTION);
+        announcer.announce(Greeter.PLEASE_THROW_AN_EXCEPTION);
 
         Greeter greeter = greeterContext.getBean(Greeter.class);
         List<Message> receivedMessages = greeter.getReceivedMessages();
         List<Message> handledMessages = greeter.getHandledMessages();
 
         waitFor(5000, () -> {
-            assertThat(extractPayload(receivedMessages), contains(PLEASE_THROW_AN_EXCEPTION, PLEASE_THROW_AN_EXCEPTION, PLEASE_THROW_AN_EXCEPTION));
+            assertThat(extractPayload(receivedMessages), Matchers.contains(Greeter.PLEASE_THROW_AN_EXCEPTION, Greeter.PLEASE_THROW_AN_EXCEPTION, Greeter.PLEASE_THROW_AN_EXCEPTION));
             assertThat(extractPayload(handledMessages), empty());
         });
 

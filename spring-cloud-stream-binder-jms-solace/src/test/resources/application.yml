@@ -14,7 +14,14 @@ spring:
   jmx:
     enabled: false
   jms:
+    jndi-name:
 
-  activemq:
-    in-memory: false
+  solace:
+    host: 192.168.99.100
+    username: admin
+    password: admin
+
+#logging:
+#  level:
+#    org.springframework: trace
     # broker-url: 'tcp://localhost:61616' this is the default for non-in-memory

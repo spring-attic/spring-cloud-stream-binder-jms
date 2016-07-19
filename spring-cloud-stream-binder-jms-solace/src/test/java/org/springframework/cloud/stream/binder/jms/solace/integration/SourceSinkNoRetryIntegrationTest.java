@@ -1,9 +1,9 @@
-package org.springframework.cloud.stream.binder.jms.integration;
+package org.springframework.cloud.stream.binder.jms.solace.integration;
 
-import org.springframework.cloud.stream.binder.jms.announcements.Announcer;
-import org.springframework.cloud.stream.binder.jms.announcements.AnnouncerApplication;
-import org.springframework.cloud.stream.binder.jms.greetings.Greeter;
-import org.springframework.cloud.stream.binder.jms.greetings.GreeterApplication;
+import org.springframework.cloud.stream.binder.jms.solace.announcements.Announcer;
+import org.springframework.cloud.stream.binder.jms.solace.announcements.AnnouncerApplication;
+import org.springframework.cloud.stream.binder.jms.solace.greetings.Greeter;
+import org.springframework.cloud.stream.binder.jms.solace.greetings.GreeterApplication;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
