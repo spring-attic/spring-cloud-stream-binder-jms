@@ -21,7 +21,6 @@ import javax.naming.InitialContext;
 import java.util.Hashtable;
 
 @SpringBootApplication(exclude = {EmbeddedServletContainerAutoConfiguration.class, WebMvcAutoConfiguration.class, JmxAutoConfiguration.class})
-@Import(SolaceJmsConfiguration.class)
 @EnableBinding(Sink.class)
 public class GreeterApplication {
 

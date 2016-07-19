@@ -13,8 +13,6 @@ spring:
   # Necessary for org.springframework.cloud.stream.binder.jms.integration testing multiple ApplicationContexts.
   jmx:
     enabled: false
-  jms:
-    jndi-name:
 
   solace:
     host: 192.168.99.100

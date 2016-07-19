@@ -18,7 +18,6 @@ import javax.naming.Context;
 import java.util.Hashtable;
 
 @SpringBootApplication(exclude = {EmbeddedServletContainerAutoConfiguration.class, WebMvcAutoConfiguration.class})
-@Import(SolaceJmsConfiguration.class)
 @EnableBinding(Source.class)
 public class AnnouncerApplication {
 
