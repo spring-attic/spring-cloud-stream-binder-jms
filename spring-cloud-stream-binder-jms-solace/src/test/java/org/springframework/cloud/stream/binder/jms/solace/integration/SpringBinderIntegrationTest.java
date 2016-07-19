@@ -1,4 +1,4 @@
-package org.springframework.cloud.stream.binder.jms.integration;
+package org.springframework.cloud.stream.binder.jms.solace.integration;
 
 import org.springframework.messaging.Message;
 

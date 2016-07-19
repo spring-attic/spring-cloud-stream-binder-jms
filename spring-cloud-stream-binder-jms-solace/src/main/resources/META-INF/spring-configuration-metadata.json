@@ -1,0 +1,28 @@
+{
+  "groups": [{
+    "name": "spring.solace",
+    "type": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties",
+    "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
+  }],
+  "properties": [
+    {
+      "name": "spring.solace.host",
+      "type": "java.lang.String",
+      "description": "Host of solace server e.g. 192.168.99.100",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
+    },
+    {
+      "name": "spring.solace.password",
+      "type": "java.lang.String",
+      "description": "Password, e.g. admin",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
+    },
+    {
+      "name": "spring.solace.username",
+      "type": "java.lang.String",
+      "description": "Username, e.g. admin",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
+    }
+  ],
+  "hints": []
+}

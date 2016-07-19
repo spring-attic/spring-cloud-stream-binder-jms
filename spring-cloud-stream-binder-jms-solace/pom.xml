@@ -40,6 +40,14 @@
             <systemPath>${project.basedir}/lib/sol-jcsmp-7.1.2.248.jar</systemPath>
         </dependency>
 
+        <dependency>
+            <groupId>com.solacesystems</groupId>
+            <artifactId>sol-jms</artifactId>
+            <version>7.1.2.248</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/sol-jms-7.1.2.248.jar</systemPath>
+        </dependency>
+
     </dependencies>
 
 </project>

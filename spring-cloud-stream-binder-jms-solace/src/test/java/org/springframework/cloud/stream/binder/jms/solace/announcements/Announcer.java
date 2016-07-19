@@ -1,4 +1,4 @@
-package org.springframework.cloud.stream.binder.jms.announcements;
+package org.springframework.cloud.stream.binder.jms.solace.announcements;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.messaging.Source;

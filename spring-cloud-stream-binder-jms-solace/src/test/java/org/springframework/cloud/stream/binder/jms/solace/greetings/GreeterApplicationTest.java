@@ -1,4 +1,4 @@
-package org.springframework.cloud.stream.binder.jms.greetings;
+package org.springframework.cloud.stream.binder.jms.solace.greetings;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
