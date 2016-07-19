@@ -35,8 +35,9 @@ public class JMSMessageChannelBinderTest {
     public void doBindConsumer_createsListenerAndBinding() throws Exception {
         JMSMessageChannelBinder.ListenerContainerFactory listenerContainerFactory = mock(JMSMessageChannelBinder.ListenerContainerFactory.class);
         JMSMessageChannelBinder.BindingFactory bindingFactory = mock(JMSMessageChannelBinder.BindingFactory.class);
+        QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
 
-        JMSMessageChannelBinder target = new JMSMessageChannelBinder(listenerContainerFactory, bindingFactory, null);
+        JMSMessageChannelBinder target = new JMSMessageChannelBinder(listenerContainerFactory, bindingFactory, null, queueProvisioner);
         ConsumerProperties properties = new ConsumerProperties();
         MessageChannel inputTarget = new DirectChannel();
 
@@ -68,12 +69,13 @@ public class JMSMessageChannelBinderTest {
         Connection connection = mock(Connection.class);
         Session session = mock(Session.class);
         MessageConsumer consumer = mock(MessageConsumer.class);
+        QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
 
         when(session.createConsumer(any(), any())).thenReturn(consumer);
         when(connection.createSession(anyBoolean(), anyInt())).thenReturn(session);
         when(connectionFactory.createConnection()).thenReturn(connection);
 
-        JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(connectionFactory, jmsTemplate);
+        JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(connectionFactory, jmsTemplate, queueProvisioner);
         DefaultBinding<MessageChannel> messageChannelBinding = (DefaultBinding<MessageChannel>) jmsMessageChannelBinder.doBindConsumer("my channel", "", inputTarget, new ConsumerProperties());
         JmsMessageDrivenEndpoint endpoint = (JmsMessageDrivenEndpoint) getField(messageChannelBinding, "endpoint");
         SimpleMessageListenerContainer listenerContainer = (SimpleMessageListenerContainer) getField(endpoint, "listenerContainer");
