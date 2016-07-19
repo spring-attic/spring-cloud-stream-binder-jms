@@ -1,0 +1,20 @@
+spring:
+  main:
+    web-environment: false
+  cloud:
+    stream:
+      bindings:
+        output:
+          destination: example
+        input:
+          destination: example
+          group: mygroup
+
+  # Necessary for org.springframework.cloud.stream.binder.jms.integration testing multiple ApplicationContexts.
+  jmx:
+    enabled: false
+  jms:
+
+  activemq:
+    in-memory: false
+    # broker-url: 'tcp://localhost:61616' this is the default for non-in-memory
