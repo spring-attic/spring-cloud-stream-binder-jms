@@ -30,9 +30,14 @@ public class SourceSinkIntegrationTest extends SpringBinderIntegrationTest {
 
     @Before
     public void setUp() {
-        greeterContext = SpringApplication.run(GreeterApplication.class,"--spring.cloud.stream.bindings.input.group=y");
-        greeterContext2 = SpringApplication.run(GreeterApplication.class,"--spring.cloud.stream.bindings.input.group=x");
-        announcerContext = SpringApplication.run(AnnouncerApplication.class);
+        String destination = getRandomName("destination");
+        String inputDestinationFormat = "--spring.cloud.stream.bindings.input.destination=%s";
+        String inputGroupFormat = "--spring.cloud.stream.bindings.input.group=%s";
+        String outputDestinationFormat = "--spring.cloud.stream.bindings.output.destination=%s";
+
+        greeterContext = SpringApplication.run(GreeterApplication.class, String.format(inputGroupFormat, getRandomName("group")), String.format(inputDestinationFormat, destination));
+        greeterContext2 = SpringApplication.run(GreeterApplication.class, String.format(inputGroupFormat, getRandomName("group")), String.format(inputDestinationFormat, destination));
+        announcerContext = SpringApplication.run(AnnouncerApplication.class, String.format(outputDestinationFormat, destination));
     }
 
     @After

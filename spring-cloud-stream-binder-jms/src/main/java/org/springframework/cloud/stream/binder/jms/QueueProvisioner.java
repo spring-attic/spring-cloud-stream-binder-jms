@@ -7,5 +7,5 @@ public interface QueueProvisioner {
      * @param topicName
      * @param consumerGroupName
      */
-    void provisionTopicAndConsumerGroup(String topicName, String consumerGroupName);
+    void provisionTopicAndConsumerGroup(String topicName, String...consumerGroupName);
 }

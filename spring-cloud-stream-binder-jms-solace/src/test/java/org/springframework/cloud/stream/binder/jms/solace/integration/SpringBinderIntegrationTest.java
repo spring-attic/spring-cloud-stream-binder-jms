@@ -4,6 +4,7 @@ import org.springframework.messaging.Message;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public abstract class SpringBinderIntegrationTest {
@@ -30,6 +31,10 @@ public abstract class SpringBinderIntegrationTest {
 
     List<? extends Object> extractPayload(List<Message> messages) {
         return messages.stream().map(Message::getPayload).collect(Collectors.toList());
+    }
+
+    protected String getRandomName(String prefix) {
+        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
     public static class SerializableTest implements Serializable {

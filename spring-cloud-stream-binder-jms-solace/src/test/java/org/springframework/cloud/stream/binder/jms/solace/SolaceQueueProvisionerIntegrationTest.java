@@ -71,8 +71,7 @@ public class SolaceQueueProvisionerIntegrationTest {
         String consumerGroup1Name = getRandomName("consumerGroup1");
         String consumerGroup2Name = getRandomName("consumerGroup2");
 
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup1Name);
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup2Name);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup1Name, consumerGroup2Name);
 
         messageProducer.send(createMessage("hello jimmy"), topic);
 
