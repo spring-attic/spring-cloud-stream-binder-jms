@@ -11,6 +11,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.messaging.Message;
+import org.springframework.test.annotation.Repeat;
 
 import java.util.List;
 
@@ -25,8 +26,13 @@ public class SourceSinkNoRetryIntegrationTest extends SpringBinderIntegrationTes
 
     @Before
     public void setUp() {
-        greeterContext = new SpringApplicationBuilder().profiles("noretry").sources(GreeterApplication.class).build().run();
-        announcerContext = SpringApplication.run(AnnouncerApplication.class);
+        String destination = getRandomName("destination");
+        String inputDestinationFormat = "--spring.cloud.stream.bindings.input.destination=%s";
+        String inputGroupFormat = "--spring.cloud.stream.bindings.input.group=%s";
+        String outputDestinationFormat = "--spring.cloud.stream.bindings.output.destination=%s";
+
+        greeterContext = SpringApplication.run(GreeterApplication.class, String.format(inputGroupFormat, getRandomName("group")), String.format(inputDestinationFormat, destination));
+        announcerContext = SpringApplication.run(AnnouncerApplication.class, String.format(outputDestinationFormat, destination));
     }
 
     @After

@@ -59,7 +59,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
      */
     @Override
     protected Binding<MessageChannel> doBindProducer(String name, MessageChannel outboundBindTarget, ProducerProperties properties) {
-        queueProvisioner.provisionTopicAndConsumerGroup(name, null);
+        queueProvisioner.provisionTopicAndConsumerGroup(name, properties.getRequiredGroups());
 
         template.setPubSubDomain(true);
 
