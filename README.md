@@ -14,4 +14,4 @@ JMS also does not support provisioning of queues and topics, whereas in SCS queu
 Some brokers which implement JMS nonetheless provide proprietary extensions which do support these required pieces of functionality.
 The `Binder` therefore delegates provisioning this to a broker-specific `QueueProvisioner`.
 
-For more details, see the documentation for the individual broker support submodules.
+For more details, see the documentation for the [individual broker support submodules](spring-cloud-stream-binder-jms-solace).
