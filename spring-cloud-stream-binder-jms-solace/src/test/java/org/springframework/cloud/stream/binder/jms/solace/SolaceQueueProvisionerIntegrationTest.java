@@ -1,5 +1,6 @@
 package org.springframework.cloud.stream.binder.jms.solace;
 
+import com.google.common.collect.Iterables;
 import com.solacesystems.jcsmp.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,8 +10,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.iterableWithSize;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.*;
 
@@ -52,7 +56,7 @@ public class SolaceQueueProvisionerIntegrationTest {
     @Test
     public void provision_whenTopicProvisionedWithoutConsumers_itShouldDiscardMessages() throws Exception {
         //provision just the topic
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), null);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName());
 
         messageProducer.send(createMessage("hello jimmy"), topic);
 
@@ -86,6 +90,59 @@ public class SolaceQueueProvisionerIntegrationTest {
 
         assertThat(countingListener2.getErrors(), empty());
         assertThat(countingListener2.getMessages(), contains("hello jimmy"));
+    }
+
+    @Test
+    public void provision_whenMultipleListenersOnOneQueue_listenersCompeteForMessages() throws Exception {
+        int numberOfMessages = 1000;
+
+        String consumerGroupName = getRandomName("consumerGroup");
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
+
+        IntStream.range(0, numberOfMessages)
+                .mapToObj(String::valueOf)
+                .map(this::createMessage)
+                .forEach(m -> {
+                    try {
+                        messageProducer.send(m, topic);
+                    }
+                    catch (JCSMPException e) { throw new RuntimeException(e); }
+                });
+
+        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
+
+        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
+        consumerFlowProperties.setEndpoint(queue);
+
+        CountDownLatch latch = new CountDownLatch(numberOfMessages);
+        CountingListener countingListener = new CountingListener(latch);
+
+        Queue queue2 = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
+        ConsumerFlowProperties consumerFlowProperties2 = new ConsumerFlowProperties();
+        consumerFlowProperties2.setEndpoint(queue2);
+        CountingListener countingListener2 = new CountingListener(latch);
+
+        JCSMPSession session = createSession();
+        JCSMPSession session2 = createSession();
+
+        FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
+        FlowReceiver consumer2 = session2.createFlow(countingListener2, consumerFlowProperties2);
+
+        consumer.start();
+        consumer2.start();
+
+
+        latch.await();
+
+        assertThat(countingListener.getErrors(), empty());
+        assertThat(countingListener2.getErrors(), empty());
+
+        assertThat("We missed some messages!", Iterables.concat(countingListener.getMessages(), countingListener2.getMessages()), iterableWithSize(numberOfMessages));
+
+        assertThat("listener one got all the messages!", countingListener.getMessages(), iterableWithSize(lessThan(numberOfMessages)));
+        assertThat("listener two got all the messages!", countingListener2.getMessages(), iterableWithSize(lessThan(numberOfMessages)));
+
+        System.out.println(String.format("boomba! %d %d", countingListener.getMessages().size(), countingListener2.getMessages().size()));
     }
 
     @Test
@@ -156,6 +213,10 @@ public class SolaceQueueProvisionerIntegrationTest {
 
         private final List<String> messages = new ArrayList<>();
 
+        private CountingListener(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
         private CountingListener(int expectedMessages) {
             this.latch = new CountDownLatch(expectedMessages);
         }
@@ -163,6 +224,18 @@ public class SolaceQueueProvisionerIntegrationTest {
         @Override
         public void onReceive(BytesXMLMessage bytesXMLMessage) {
             messages.add(new String(bytesXMLMessage.getUserData()));
+
+            long count = latch.getCount();
+
+            if(count % 1000 == 0){
+                System.out.println(String.format("Message %s", count));
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
             latch.countDown();
         }
 

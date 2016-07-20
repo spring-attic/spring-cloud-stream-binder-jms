@@ -20,6 +20,8 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
 
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
             JCSMPSession session = new SessionFactory().build();
+
+            //TODO: we don't need the topic to be durable
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
             session.provision(topicEndpoint, null, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
 
@@ -43,7 +45,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
 
             EndpointProperties endpointProperties = new EndpointProperties();
             endpointProperties.setPermission(EndpointProperties.PERMISSION_DELETE);
-            endpointProperties.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
+            endpointProperties.setAccessType(EndpointProperties.ACCESSTYPE_NONEXCLUSIVE);
             endpointProperties.setQuota(100);
 
             session.provision(addedQueue, endpointProperties, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);

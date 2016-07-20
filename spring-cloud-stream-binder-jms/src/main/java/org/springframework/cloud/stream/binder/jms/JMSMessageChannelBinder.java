@@ -44,7 +44,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     }
 
     /**
-     * JMS Consumer - consumes JMS messages and writes them to the inputTarget, so it's an input to our application (Sink.INPUT)
+     * JMS Consumer - consumes JMS messages and writes them to the inputTarget, so it's an input to our Receiver application (Sink.INPUT)
      */
     @Override
     protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputTarget, ConsumerProperties properties) {
@@ -55,7 +55,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     }
 
     /**
-     * JMS Producer - consumes Spring from the outboundBindTarget messages and writes them to JMS, so it's an output from our application (Source.OUTPUT)
+     * JMS Producer - consumes Spring from the outboundBindTarget messages and writes them to JMS, so it's an output from our Sender application (Source.OUTPUT)
      */
     @Override
     protected Binding<MessageChannel> doBindProducer(String name, MessageChannel outboundBindTarget, ProducerProperties properties) {
