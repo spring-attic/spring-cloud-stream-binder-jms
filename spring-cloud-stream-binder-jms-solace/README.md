@@ -1,7 +1,7 @@
 Spring Cloud Stream JMS Binder – Solace Support
 -----------------------------------------------
 
-This module provides provisioning functionality as required by [spring-cloud-stream-binder-jms](../).
+This module provides provisioning functionality as required by [spring-cloud-stream-binder-jms](/).
 
 To be able to compile the module Solace Java and JMS API jars need to be 
 available. Maven is configured to look for them in the lib folder. 
