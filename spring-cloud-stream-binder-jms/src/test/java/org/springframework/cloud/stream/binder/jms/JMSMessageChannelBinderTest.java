@@ -3,13 +3,16 @@ package org.springframework.cloud.stream.binder.jms;
 import org.junit.Test;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.DefaultBinding;
-import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
+import org.springframework.cloud.stream.binder.PartitionKeyExtractorStrategy;
+import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.jms.JmsMessageDrivenEndpoint;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.retry.support.RetryTemplate;
 
 import javax.jms.Connection;
@@ -28,16 +31,18 @@ import static org.springframework.test.util.ReflectionTestUtils.getField;
 public class JMSMessageChannelBinderTest {
 
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
+    JMSMessageChannelBinder.JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = mock(JMSMessageChannelBinder.JmsSendingMessageHandlerFactory.class);
     ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
 
 
     @Test
     public void doBindConsumer_createsListenerAndBinding() throws Exception {
         JMSMessageChannelBinder.ListenerContainerFactory listenerContainerFactory = mock(JMSMessageChannelBinder.ListenerContainerFactory.class);
-        JMSMessageChannelBinder.BindingFactory bindingFactory = mock(JMSMessageChannelBinder.BindingFactory.class);
+        JMSMessageChannelBinder.ConsumerBindingFactory consumerBindingFactory = mock(JMSMessageChannelBinder.ConsumerBindingFactory.class);
+        JMSMessageChannelBinder.ProducerBindingFactory producerBindingFactory = mock(JMSMessageChannelBinder.ProducerBindingFactory.class);
         QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
 
-        JMSMessageChannelBinder target = new JMSMessageChannelBinder(listenerContainerFactory, bindingFactory, null, queueProvisioner);
+        JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
         ConsumerProperties properties = new ConsumerProperties();
         MessageChannel inputTarget = new DirectChannel();
 
@@ -47,7 +52,33 @@ public class JMSMessageChannelBinderTest {
         target.doBindConsumer("whatever", "group", inputTarget, properties);
 
         verify(listenerContainerFactory, times(1)).build("group");
-        verify(bindingFactory, times(1)).build(eq("whatever"), eq("group"), eq(inputTarget), eq(listenerContainer), any(RetryTemplate.class));
+        verify(consumerBindingFactory, times(1)).build(eq("whatever"), eq("group"), eq(inputTarget), eq(listenerContainer), any(RetryTemplate.class));
+    }
+
+    @Test
+    public void doBindConsumer_whenPartitioned_provisionsWithPartitionIndex() throws Exception {
+        JMSMessageChannelBinder.ListenerContainerFactory listenerContainerFactory = mock(JMSMessageChannelBinder.ListenerContainerFactory.class);
+        JMSMessageChannelBinder.ConsumerBindingFactory consumerBindingFactory = mock(JMSMessageChannelBinder.ConsumerBindingFactory.class);
+        JMSMessageChannelBinder.ProducerBindingFactory producerBindingFactory = mock(JMSMessageChannelBinder.ProducerBindingFactory.class);
+
+        QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
+
+        JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
+        ConsumerProperties properties = new ConsumerProperties();
+        MessageChannel inputTarget = new DirectChannel();
+
+        properties.setPartitioned(true);
+        properties.setInstanceCount(2);
+        properties.setInstanceIndex(0);
+
+        AbstractMessageListenerContainer listenerContainer = mock(AbstractMessageListenerContainer.class);
+        when(listenerContainerFactory.build(anyString())).thenReturn(listenerContainer);
+
+        target.doBindConsumer("topic", "group", inputTarget, properties);
+
+        verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("topic-0", "group-0");
+        verify(listenerContainerFactory, times(1)).build("group-0");
+        verify(consumerBindingFactory, times(1)).build(eq("topic"), eq("group"), eq(inputTarget), eq(listenerContainer), any(RetryTemplate.class));
     }
 
     @Test
@@ -82,4 +113,42 @@ public class JMSMessageChannelBinderTest {
 
         assertThat(listenerContainer.getDestinationName(), is("my group"));
     }
+
+    @Test
+    public void doBindProducer_whenRequiredGroupsProvided_provisionsRequiredGroups() throws Exception {
+        JMSMessageChannelBinder.ListenerContainerFactory listenerContainerFactory = mock(JMSMessageChannelBinder.ListenerContainerFactory.class);
+        JMSMessageChannelBinder.ConsumerBindingFactory consumerBindingFactory = mock(JMSMessageChannelBinder.ConsumerBindingFactory.class);
+        JMSMessageChannelBinder.ProducerBindingFactory producerBindingFactory = mock(JMSMessageChannelBinder.ProducerBindingFactory.class);
+        QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
+        MessageChannel outboundBindTarget = mock(SubscribableChannel.class);
+        ProducerProperties properties = new ProducerProperties();
+        properties.setRequiredGroups("required-group","required-group2");
+
+        JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
+        target.setApplicationContext(mock(AbstractApplicationContext.class));
+        target.doBindProducer("mytopic", outboundBindTarget, properties);
+
+        verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("mytopic", "required-group", "required-group2");
+    }
+
+    @Test
+    public void doBindProducer_whenPartitioningAndRequiredGroupsProvided_provisionsCartesianProductsOfGroupsAndPartitions() throws Exception {
+        JMSMessageChannelBinder.ListenerContainerFactory listenerContainerFactory = mock(JMSMessageChannelBinder.ListenerContainerFactory.class);
+        JMSMessageChannelBinder.ConsumerBindingFactory consumerBindingFactory = mock(JMSMessageChannelBinder.ConsumerBindingFactory.class);
+        JMSMessageChannelBinder.ProducerBindingFactory producerBindingFactory = mock(JMSMessageChannelBinder.ProducerBindingFactory.class);
+        QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
+        MessageChannel outboundBindTarget = mock(SubscribableChannel.class);
+        ProducerProperties properties = new ProducerProperties();
+        properties.setPartitionCount(2);
+        properties.setPartitionKeyExtractorClass(PartitionKeyExtractorStrategy.class);
+        properties.setRequiredGroups("required-group","required-group2");
+
+        JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
+        target.setApplicationContext(mock(AbstractApplicationContext.class));
+        target.doBindProducer("mytopic", outboundBindTarget, properties);
+
+        verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("mytopic-0", "required-group-0", "required-group2-0");
+        verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("mytopic-1", "required-group-1", "required-group2-1");
+    }
+
 }

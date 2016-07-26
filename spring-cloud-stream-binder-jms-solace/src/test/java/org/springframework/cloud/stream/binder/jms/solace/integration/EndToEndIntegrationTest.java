@@ -16,12 +16,14 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.messaging.Message;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.hamcrest.Matchers.*;
@@ -31,66 +33,60 @@ import static org.junit.Assert.assertThat;
 
 public class EndToEndIntegrationTest {
 
-    private LazyApplicationContext receiverContextGroup1;
-    private LazyApplicationContext receiverContext2Group1;
-    private LazyApplicationContext senderContext;
-    private LazyApplicationContext receiverContextGroup2;
-    private LazyApplicationContext receiverContextNoRetry;
+    private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
 
+    private String destination;
+
+    private static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
+    private static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
+    private static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
+    private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
+
+    private String randomGroupArg1;
+    private String randomGroupArg2;
 
     @Before
     public void startProducerAndConsumers() {
-        String destination = getRandomName("destination");
-        String inputDestinationFormat = "--spring.cloud.stream.bindings.input.destination=%s";
-        String inputGroupFormat = "--spring.cloud.stream.bindings.input.group=%s";
-        String outputDestinationFormat = "--spring.cloud.stream.bindings.output.destination=%s";
-        String group1Name = getRandomName("group1");
-
-        receiverContextGroup1 = new LazyApplicationContext(() -> new SpringApplicationBuilder(ReceiverApplication.class).build().run(String.format(inputGroupFormat, group1Name), String.format(inputDestinationFormat, destination)));
-        receiverContext2Group1 = new LazyApplicationContext(() -> new SpringApplicationBuilder(ReceiverApplication.class).build().run(String.format(inputGroupFormat, group1Name), String.format(inputDestinationFormat, destination)));
-        receiverContextGroup2 = new LazyApplicationContext(() -> new SpringApplicationBuilder(ReceiverApplication.class).build().run(String.format(inputGroupFormat, getRandomName("group2")), String.format(inputDestinationFormat, destination)));
-        receiverContextNoRetry = new LazyApplicationContext(() -> new SpringApplicationBuilder(ReceiverApplication.class).profiles("noretry").build().run(String.format(inputGroupFormat, getRandomName("group3")), String.format(inputDestinationFormat, destination)));
-        senderContext = new LazyApplicationContext(() -> new SpringApplicationBuilder(SenderApplication.class).build().run(String.format(outputDestinationFormat, destination)));
+        this.destination = getRandomName("destination");
+        randomGroupArg1 = String.format(INPUT_GROUP_FORMAT, getRandomName("group1"));
+        randomGroupArg2 = String.format(INPUT_GROUP_FORMAT, getRandomName("group2"));
     }
 
     @After
     public void stopProducerAndConsumers() {
-        receiverContextGroup1.stopIfStarted();
-        receiverContextGroup2.stopIfStarted();
-        receiverContext2Group1.stopIfStarted();
-        receiverContextNoRetry.stopIfStarted();
-        senderContext.stopIfStarted();
-
+        startedContexts.forEach(ConfigurableApplicationContext::stop);
     }
 
     @Test
     public void scs_whenMultipleConsumerGroups_eachGroupGetsAllMessages() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
-        Receiver receiver = receiverContextGroup1.get().getBean(Receiver.class);
-        Receiver receiver2 = receiverContextGroup2.get().getBean(Receiver.class);
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+        Receiver receiver2 = createReceiver(randomGroupArg2);
 
         sender.send("Joseph");
         sender.send("Jack");
-        sender.send(123);
-        sender.send(Arrays.asList("hi", "world"));
+        sender.send("123");
+        sender.send("hi world");
 
 
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
 
         waitFor(() -> {
-            assertThat(extractPayload(messages), containsInAnyOrder("Joseph", "Jack", 123, Arrays.asList("hi", "world")));
-            assertThat(extractPayload(otherReceivedMessages), containsInAnyOrder("Joseph", "Jack", 123, Arrays.asList("hi", "world")));
+            assertThat(messages, hasSize(4));
+            assertThat(otherReceivedMessages, hasSize(4));
+            assertThat(extractPayload(messages), containsInAnyOrder("Joseph", "Jack", "123", "hi world"));
+            assertThat(extractPayload(otherReceivedMessages), containsInAnyOrder("Joseph", "Jack", "123", "hi world"));
         });
     }
 
     @Test
     public void scs_whenMultipleMembersOfSameConsumerGroup_groupOnlySeesEachMessageOnce() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
-        Receiver receiver = receiverContextGroup1.get().getBean(Receiver.class);
-        Receiver receiver2 = receiverContext2Group1.get().getBean(Receiver.class);
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+        Receiver receiver2 = createReceiver(randomGroupArg1);
 
-        IntStream.range(0,1000).forEach(sender::send);
+        IntStream.range(0, 1000).mapToObj(String::valueOf).forEach(sender::send);
 
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
@@ -106,8 +102,8 @@ public class EndToEndIntegrationTest {
 
     @Test
     public void scs_whenHeadersAreSpecified_headersArePassedThrough() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
-        Receiver receiver = receiverContextGroup1.get().getBean(Receiver.class);
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
 
         sender.send("Joseph", ImmutableMap.of("holy", "header"));
 
@@ -115,17 +111,17 @@ public class EndToEndIntegrationTest {
 
         waitFor(() -> assertThat(messages, contains(
                 allOf(
-                    hasProperty("payload", is("Joseph")),
-                    hasProperty("headers", hasEntry("holy", "header"))
+                        hasProperty("payload", is("Joseph")),
+                        hasProperty("headers", hasEntry("holy", "header"))
                 )
         )));
 
     }
 
     @Test
-    public void scs_whenThereConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
-        Receiver receiver = receiverContextGroup1.get().getBean(Receiver.class);
+    public void scs_whenConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
 
         sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
 
@@ -133,41 +129,133 @@ public class EndToEndIntegrationTest {
         List<Message> handledMessages = receiver.getHandledMessages();
 
         waitFor(5000, () -> {
+            assertThat(receivedMessages, hasSize(3));
+            assertThat(handledMessages, empty());
             assertThat(extractPayload(receivedMessages), Matchers.contains(Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION));
-            assertThat(extractPayload(handledMessages), empty());
         });
 
     }
 
     @Test
     public void scs_whenRetryIsDisabled_doesNotRetry() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
-        Receiver receiver = receiverContextNoRetry.get().getBean(Receiver.class);
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
         sender.send("José");
 
         List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> assertThat(extractPayload(messages), containsInAnyOrder("José")));
+        waitFor(() -> {
+            assertThat(messages, hasSize(1));
+            assertThat(extractPayload(messages), containsInAnyOrder("José"));
+        });
     }
 
+    @Test
+    public void scs_whenAPartitioningKeyIsConfigured_messagesAreRoutedToTheRelevantPartition() throws Exception {
+        Sender sender = createSender(
+                String.format("--spring.cloud.stream.bindings.output.producer.partitionKeyExpression=%s", "payload.equals('foo')?0:1"),
+                String.format("--spring.cloud.stream.bindings.output.producer.partitionCount=%s", 2)
+        );
+
+        Receiver receiverPartition0 = createReceiver(
+                randomGroupArg1,
+                String.format("--spring.cloud.stream.instance-index=%s", 0),
+                String.format("--spring.cloud.stream.instance-count=%s", 2),
+                String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
+        );
+        Receiver receiverPartition1 = createReceiver(
+                randomGroupArg1,
+                String.format("--spring.cloud.stream.instance-index=%s", 1),
+                String.format("--spring.cloud.stream.instance-count=%s", 2),
+                String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
+        );
+
+        sender.send("foo");
+        sender.send("bar");
+        sender.send("baz");
+        sender.send("foo");
+        IntStream.range(0,1000).mapToObj(String::valueOf).forEach(sender::send);
+
+        List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
+        List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
+
+        waitFor(() -> {
+            assertThat(messagesPartition1, hasSize(1002));
+            List<String> objects = (List<String>) extractPayload(messagesPartition1);
+            assertThat(objects, hasItems("bar", "baz"));
+
+            assertThat(messagesPartition0, hasSize(2));
+            assertThat(extractPayload(messagesPartition0), containsInAnyOrder("foo", "foo"));
+        });
+    }
+
+    @Test
     @Ignore
-    public void serializesPayloads() throws Exception {
-        Sender sender = senderContext.get().getBean(Sender.class);
+    public void scs_supportsSerializable() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
 
         SerializableTest serializableTest = new SerializableTest("some value");
         sender.send(serializableTest);
 
-        Receiver receiver = receiverContextGroup1.get().getBean(Receiver.class);
-        Receiver receiver2 = receiverContextGroup2.get().getBean(Receiver.class);
-
-        List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
 
         waitFor(() -> {
+            assertThat(messages, hasSize(1));
             assertThat(extractPayload(messages), containsInAnyOrder(serializableTest));
-            assertThat(extractPayload(otherReceivedMessages), containsInAnyOrder(serializableTest));
         });
+    }
+
+    @Test
+    @Ignore
+    public void scs_supportsList() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+
+        List<String> stringList = Arrays.asList("hello", "world");
+        sender.send(stringList);
+
+        List<Message> messages = receiver.getHandledMessages();
+
+        waitFor(() -> {
+            assertThat(messages, hasSize(1));
+            assertThat(extractPayload(messages), containsInAnyOrder(stringList));
+        });
+    }
+
+    @Test
+    @Ignore
+    public void scs_supportsInt() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+
+        sender.send(11);
+
+        List<Message> messages = receiver.getHandledMessages();
+
+        waitFor(() -> {
+            assertThat(messages, hasSize(1));
+            assertThat(extractPayload(messages), containsInAnyOrder(11));
+        });
+    }
+
+    private Sender createSender(String... arguments) {
+        String destinationArg = String.format(OUTPUT_DESTINATION_FORMAT, this.destination);
+        arguments = Stream.concat(Arrays.stream(arguments), Stream.of(destinationArg)).toArray(String[]::new);
+
+        ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class).build().run(arguments);
+        startedContexts.add(context);
+        return context.getBean(Sender.class);
+    }
+
+    private Receiver createReceiver(String... arguments) {
+        String destinationArg = String.format(INPUT_DESTINATION_FORMAT, this.destination);
+        arguments = Stream.concat(Arrays.stream(arguments), Stream.of(destinationArg)).toArray(String[]::new);
+
+        ConfigurableApplicationContext context = new SpringApplicationBuilder(ReceiverApplication.class).build().run(arguments);
+        startedContexts.add(context);
+        return context.getBean(Receiver.class);
     }
 
     public void waitFor(Runnable assertion) throws InterruptedException {
@@ -191,39 +279,11 @@ public class EndToEndIntegrationTest {
     }
 
     List<? extends Object> extractPayload(Iterable<Message> messages) {
-        return StreamSupport.stream(messages.spliterator(),false).map(Message::getPayload).collect(Collectors.toList());
+        return StreamSupport.stream(messages.spliterator(), false).map(Message::getPayload).collect(Collectors.toList());
     }
 
     private String getRandomName(String prefix) {
         return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    }
-
-
-    private static class LazyApplicationContext {
-
-        private final Supplier<ConfigurableApplicationContext> supplier;
-        private ConfigurableApplicationContext app;
-
-        public LazyApplicationContext(Supplier<ConfigurableApplicationContext> supplier) {
-            this.supplier = supplier;
-        }
-
-        public ConfigurableApplicationContext get() {
-            if(!isCreated()) {
-                app = supplier.get();
-            }
-            return app;
-        }
-
-        private boolean isCreated() {
-            return app != null;
-        }
-
-        public void stopIfStarted(){
-            if (isCreated()) {
-                app.stop();
-            }
-        }
     }
 
     public static class SerializableTest implements Serializable {

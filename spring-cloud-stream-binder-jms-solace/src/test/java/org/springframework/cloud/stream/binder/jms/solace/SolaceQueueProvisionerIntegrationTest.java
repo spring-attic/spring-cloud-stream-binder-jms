@@ -198,10 +198,11 @@ public class SolaceQueueProvisionerIntegrationTest {
     }
 
     private JCSMPSession createSession() throws InvalidPropertiesException {
+        //TODO: Use Spring properties instead
         JCSMPProperties properties = new JCSMPProperties();
         properties.setProperty("username", "admin");
         properties.setProperty("password", "admin");
-        properties.setProperty("host", "192.168.99.100");
+        properties.setProperty("host", "192.168.99.101");
 
         return JCSMPFactory.onlyInstance().createSession(properties);
     }

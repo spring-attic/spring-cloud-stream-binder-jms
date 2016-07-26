@@ -54,9 +54,10 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
     }
 
     private class SessionFactory {
+        //TODO: Use spring properties instead
         public JCSMPSession build() throws InvalidPropertiesException {
             JCSMPProperties sessionProperties = new JCSMPProperties();
-            sessionProperties.setProperty("host", "192.168.99.100");
+            sessionProperties.setProperty("host", "192.168.99.101");
             sessionProperties.setProperty("username", "admin");
             sessionProperties.setProperty("password", "admin");
 
