@@ -5,12 +5,20 @@ import com.solacesystems.jcsmp.Queue;
 import com.solacesystems.jcsmp.impl.DurableTopicEndpointImpl;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 
-import java.util.Arrays;
+import java.util.Optional;
 
 import static com.solacesystems.jcsmp.JCSMPErrorResponseSubcodeEx.SUBSCRIPTION_ALREADY_PRESENT;
 
 public class SolaceQueueProvisioner implements QueueProvisioner {
+    private static String DMQ_NAME = "#DEAD_MSG_QUEUE";
+
+    private SolaceConfigurationProperties solaceConfigurationProperties;
+
+    public SolaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) {
+        this.solaceConfigurationProperties = solaceConfigurationProperties;
+    }
 
     @Override
     public void provisionTopicAndConsumerGroup(String name, String...groups) {
@@ -38,6 +46,23 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         }
     }
 
+    @Override
+    public Optional<String> provisionDeadLetterQueue() {
+        JCSMPSession session = null;
+        Queue deadMsgQ;
+        try {
+            session = new SessionFactory().build();
+            EndpointProperties dmq_provision = new EndpointProperties();
+            dmq_provision.setPermission(EndpointProperties.PERMISSION_DELETE);
+            dmq_provision.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
+            deadMsgQ = JCSMPFactory.onlyInstance().createQueue(DMQ_NAME);
+            session.provision(deadMsgQ, dmq_provision, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
+        } catch (JCSMPException e) {
+            throw new RuntimeException(e);
+        }
+        return Optional.of(DMQ_NAME);
+    }
+
     private void doProvision(JCSMPSession session, Topic topic, String group) throws JCSMPException {
         if (group != null) {
 
@@ -46,6 +71,12 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
             EndpointProperties endpointProperties = new EndpointProperties();
             endpointProperties.setPermission(EndpointProperties.PERMISSION_DELETE);
             endpointProperties.setAccessType(EndpointProperties.ACCESSTYPE_NONEXCLUSIVE);
+
+            Integer maxRedeliveryAttempts = solaceConfigurationProperties.getMaxRedeliveryAttempts();
+            if(maxRedeliveryAttempts != null && maxRedeliveryAttempts >= 0){
+                endpointProperties.setMaxMsgRedelivery(1);
+            }
+
             endpointProperties.setQuota(100);
 
             session.provision(addedQueue, endpointProperties, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);

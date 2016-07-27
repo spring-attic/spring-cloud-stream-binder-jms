@@ -37,8 +37,8 @@ public class SolaceJmsConfiguration {
     }
 
     @Bean
-    public QueueProvisioner solaceQueueProvisioner() {
-        return new SolaceQueueProvisioner();
+    public QueueProvisioner solaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) {
+        return new SolaceQueueProvisioner(solaceConfigurationProperties);
     }
 
 }

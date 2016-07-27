@@ -2,19 +2,27 @@ package org.springframework.cloud.stream.binder.jms.solace;
 
 import com.google.common.collect.Iterables;
 import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.DeliveryMode;
+import com.solacesystems.jcsmp.Queue;
+import com.solacesystems.jcsmp.Topic;
+import com.solacesystems.jcsmp.transaction.TransactedSession;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 
+import javax.jms.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.iterableWithSize;
-import static org.hamcrest.Matchers.lessThan;
+import static com.solacesystems.jcsmp.JCSMPSession.FLAG_IGNORE_DOES_NOT_EXIST;
+import static com.solacesystems.jcsmp.JCSMPSession.WAIT_FOR_CONFIRM;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.*;
 
@@ -24,13 +32,22 @@ public class SolaceQueueProvisionerIntegrationTest {
     private JCSMPSession session;
     private XMLMessageProducer messageProducer;
     private Topic topic;
+    private SolaceConfigurationProperties solaceConfigurationProperties = new SolaceConfigurationProperties();
+    public static final String DLQ_NAME = "#DEAD_MSG_QUEUE";
+    public static final Queue DLQ = JCSMPFactory.onlyInstance().createQueue(DLQ_NAME);
 
     @Before
     public void setUp() throws Exception {
-        this.solaceQueueProvisioner = new SolaceQueueProvisioner();
+        solaceConfigurationProperties.setMaxRedeliveryAttempts(null);
+        this.solaceQueueProvisioner = new SolaceQueueProvisioner(solaceConfigurationProperties);
         this.session = createSession();
         this.messageProducer = session.getMessageProducer(new MessageProducerVoidEventHandler());
         this.topic = JCSMPFactory.onlyInstance().createTopic(getRandomName("topic"));
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        session.deprovision(DLQ,WAIT_FOR_CONFIRM | FLAG_IGNORE_DOES_NOT_EXIST);
     }
 
     @Test
@@ -169,6 +186,50 @@ public class SolaceQueueProvisionerIntegrationTest {
         assertThat(countingListener2.getMessages(), contains("message two"));
     }
 
+    @Test
+    public void provision_whenMaxRetryAttemptsGreaterThan0_shouldSetMRAInQueueAndProvisionDMQ() throws Exception {
+        solaceConfigurationProperties.setMaxRedeliveryAttempts(1);
+        TransactedSession transactedSession = session.createTransactedSession();
+        String consumerGroupName = getRandomName("consumerGroup");
+
+        solaceQueueProvisioner.provisionDeadLetterQueue();
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
+
+        messageProducer.send(createMessage("hello jimmy"), topic);
+        consumeAndThrowException(consumerGroupName,transactedSession);
+
+        String messagePayload = awaitUntilDMQHasAMessage();
+
+        assertThat(messagePayload, is("hello jimmy"));
+    }
+
+    @Test
+    public void provisionDLQ_createsANativeSolaceDLQ() throws Exception {
+        String DEATH_LETTER = "I got a letter this morning";
+
+        Optional<String> deadLetterQueue = solaceQueueProvisioner.provisionDeadLetterQueue();
+
+        //createQueue creates a local reference to the queue, the actual queue has to exist
+        messageProducer.send(
+                createMessage(DEATH_LETTER),
+                DLQ);
+        CountingListener countingListener = listenToQueue(DLQ_NAME);
+        countingListener.awaitExpectedMessages();
+
+        assertThat(countingListener.getMessages().size(), is(1));
+        assertThat(countingListener.getMessages().get(0), is(DEATH_LETTER));
+        assertThat(deadLetterQueue.get(), is(DLQ_NAME));
+
+    }
+
+    private String awaitUntilDMQHasAMessage() throws JCSMPException, InterruptedException {
+        CountingListener countingListener = listenToQueue("#DEAD_MSG_QUEUE");
+
+        countingListener.awaitExpectedMessages();
+
+        return countingListener.getMessages().get(0);
+    }
+
     private CountingListener listenToQueue(String queueName) throws JCSMPException {
         return listenToQueue(queueName, 1);
     }
@@ -185,9 +246,23 @@ public class SolaceQueueProvisionerIntegrationTest {
         return countingListener;
     }
 
+    private FailingListener consumeAndThrowException(String queueName, TransactedSession transactedSession) throws JCSMPException {
+        Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
+
+        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
+        consumerFlowProperties.setEndpoint(queue);
+
+        FailingListener failingListener = new FailingListener(transactedSession);
+        EndpointProperties endpointProperties = new EndpointProperties();
+        FlowReceiver consumer = transactedSession.createFlow(failingListener, consumerFlowProperties, endpointProperties);
+        consumer.start();
+        return failingListener;
+    }
+
     private BytesXMLMessage createMessage(String userData) {
         BytesXMLMessage message = JCSMPFactory.onlyInstance().createMessage(BytesXMLMessage.class);
         message.setDeliveryMode(DeliveryMode.PERSISTENT);
+        message.setDMQEligible(true);
         message.setUserData(userData.getBytes());
         message.writeAttachment("i am an attachment".getBytes());
         return message;
@@ -256,6 +331,32 @@ public class SolaceQueueProvisionerIntegrationTest {
         List<String> getMessages() {
             return messages;
         }
+    }
+
+    private class FailingListener implements XMLMessageListener {
+
+        private TransactedSession transactedSession;
+
+        public FailingListener(TransactedSession transactedSession) {
+
+            this.transactedSession = transactedSession;
+        }
+
+        @Override
+        public void onReceive(BytesXMLMessage bytesXMLMessage) {
+            try {
+                transactedSession.rollback();
+            } catch (JCSMPException e) {
+                e.printStackTrace();
+            }
+            throw new RuntimeException("You shall not pass");
+        }
+
+        @Override
+        public void onException(JCSMPException e) {
+//            throw new RuntimeException("You shall not pass", e);
+        }
+
     }
 
     private class MessageProducerVoidEventHandler implements JCSMPStreamingPublishEventHandler {
