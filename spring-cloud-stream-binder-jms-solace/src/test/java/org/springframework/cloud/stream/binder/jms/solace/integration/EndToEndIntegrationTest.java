@@ -91,10 +91,9 @@ public class EndToEndIntegrationTest {
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
 
-        Iterable<Message> combinedMessages = Iterables.concat(messages, otherReceivedMessages);
+        waitFor(() -> assertThat(otherReceivedMessages.size() + messages.size(), is(1000)));
 
         waitFor(() -> {
-            assertThat(combinedMessages, iterableWithSize(1000));
             assertThat(otherReceivedMessages, iterableWithSize(lessThan(1000)));
             assertThat(messages, iterableWithSize(lessThan(1000)));
         });

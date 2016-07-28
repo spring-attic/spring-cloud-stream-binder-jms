@@ -27,24 +27,22 @@ public class SolaceConfigurationProperties {
     /**
      * Solace maximum redelivery attempts. If specified, once a message has exceeded the
      * specified amount of re-deliveries, it will be automatically sent to the DLQ by the
-     * router.
+     * broker.
      *
-     * 0 means retry forever. For any value greater than 0 a DLQ named "#DEAD_MSG_QUEUE"
-     * will be automatically created per message VPN.
+     * 0 means retry forever, which can cause Poison Messages. 1 means re-try once, which
+     * implies up to 2 delivery attempts. For any value greater than 0 a DLQ named
+     * "#DEAD_MSG_QUEUE" will be automatically created per message VPN.
      *
-     * NOTE: This is complementary to spring.cloud.stream.bindings.input.consumer.maxAttempts
-     * since the second provides redelivery behaviour at the application level. A good
-     * configuration set might be:
+     * NOTE: This is complementary to spring.cloud.stream.bindings.[your-input].consumer.maxAttempts
+     * since the second provides redelivery behaviour at the JMS binder level. Setting
+     * maxRedeliveryAttempts flag to some value higher than 0 grants that a poison message will eventually
+     * appear in the DLQ even if it can not be fetched by Spring Cloud Stream.
      *
-     *      spring.cloud.stream.bindings.input.consumer.maxAttempts=3
-     *      spring.solace.maxRedeliveryAttempts=1
+     * Both can be safely configured. If the JMS binder is set to retry, it will consume
+     * the message and send it directly to the DMQ after a failure scenario. If the message
+     * cannot be delivered to the binder (e.g. corrupt message) the broker itself will
+     * route it to the DMQ after maxRedeliveryAttempts.
      *
-     * If "dead letters" are handled in the application or:
-     *
-     *      spring.cloud.stream.bindings.input.consumer.maxAttempts=1
-     *      spring.solace.maxRedeliveryAttempts=3
-     *
-     * If you prefer them to be handled in the router.
      */
     @Max(255)
     @Min(0)

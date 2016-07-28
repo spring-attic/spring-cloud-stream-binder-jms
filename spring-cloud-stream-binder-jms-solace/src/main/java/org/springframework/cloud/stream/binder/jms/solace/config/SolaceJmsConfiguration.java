@@ -33,6 +33,9 @@ public class SolaceJmsConfiguration {
         solConnectionFactory.setProperty("Host", config.getHost());
         solConnectionFactory.setProperty("Username", config.getUsername());
         solConnectionFactory.setProperty("Password", config.getPassword());
+        //Disabling direct transport allows JMS to use transacted sessions. Enabling at the same time
+        //DLQ routing if maxRedeliveryAttempts is set
+        solConnectionFactory.setDirectTransport(false);
         return solConnectionFactory;
     }
 

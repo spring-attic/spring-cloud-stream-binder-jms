@@ -7,10 +7,7 @@ There is a Pivotal Tracker® project [publicly available](https://www.pivotaltra
 
 ### Limitations
 
-This binder is currently in alpha and is lacking some key features, in particular:
-
-* Partitioning
-* DLQ
+This binder is currently in alpha, bugs are expected.
 
 JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and 
 publish-subscribe messaging using [`Topic`](https://docs.oracle.com/javaee/6/api/javax/jms/Topic.html). However, neither of these patterns

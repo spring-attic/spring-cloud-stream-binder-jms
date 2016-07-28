@@ -1,5 +1,6 @@
 package org.springframework.cloud.stream.binder.jms;
 
+import org.hamcrest.core.Is;
 import org.junit.Test;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.DefaultBinding;
@@ -20,7 +21,7 @@ import javax.jms.ConnectionFactory;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
 
-import static org.hamcrest.core.Is.is;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -88,9 +89,13 @@ public class JMSMessageChannelBinderTest {
 
         AbstractMessageListenerContainer messageListenerContainer = listenerContainerFactory.build("my channel");
 
-        assertThat(messageListenerContainer.getDestinationName(), is("my channel"));
-        assertThat(messageListenerContainer.getConnectionFactory(), is(factory));
-        assertThat(getField(messageListenerContainer, "pubSubDomain"), is(false));
+        assertThat(messageListenerContainer.getDestinationName(), Is.is("my channel"));
+        assertThat(messageListenerContainer.getConnectionFactory(), Is.is(factory));
+        assertThat(getField(messageListenerContainer, "pubSubDomain"), Is.is(false));
+        assertThat("Transacted is not true. Transacted is required for guaranteed deliveries. " +
+                "In particular, some implementation will require it so they can eventually route the message to the DLQ",
+                messageListenerContainer.isSessionTransacted(), is(true));
+
     }
 
 
@@ -111,7 +116,7 @@ public class JMSMessageChannelBinderTest {
         JmsMessageDrivenEndpoint endpoint = (JmsMessageDrivenEndpoint) getField(messageChannelBinding, "endpoint");
         SimpleMessageListenerContainer listenerContainer = (SimpleMessageListenerContainer) getField(endpoint, "listenerContainer");
 
-        assertThat(listenerContainer.getDestinationName(), is("my group"));
+        assertThat(listenerContainer.getDestinationName(), Is.is("my group"));
     }
 
     @Test

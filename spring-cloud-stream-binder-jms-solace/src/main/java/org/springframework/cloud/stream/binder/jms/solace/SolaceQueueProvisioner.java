@@ -47,7 +47,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
     }
 
     @Override
-    public Optional<String> provisionDeadLetterQueue() {
+    public String provisionDeadLetterQueue() {
         JCSMPSession session = null;
         Queue deadMsgQ;
         try {
@@ -60,7 +60,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         } catch (JCSMPException e) {
             throw new RuntimeException(e);
         }
-        return Optional.of(DMQ_NAME);
+        return DMQ_NAME;
     }
 
     private void doProvision(JCSMPSession session, Topic topic, String group) throws JCSMPException {

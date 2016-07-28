@@ -34,7 +34,8 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     protected final Log logger = LogFactory.getLog(this.getClass());
 
     public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template, QueueProvisioner queueProvisioner) throws JMSException {
-        this(queueProvisioner, new ConsumerBindingFactory(), new ProducerBindingFactory(), new ListenerContainerFactory(factory), null);
+        this(queueProvisioner, null, new ProducerBindingFactory(), new ListenerContainerFactory(factory), null);
+        this.consumerBindingFactory = new ConsumerBindingFactory();
         this.jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(template);
     }
 
@@ -102,12 +103,15 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
             listenerContainer.setDestinationName(name);
             listenerContainer.setPubSubDomain(false);
             listenerContainer.setConnectionFactory(factory);
+            listenerContainer.setSessionTransacted(true); //Maybe configurable?
             return listenerContainer;
         }
     }
 
 
-    public static class ConsumerBindingFactory {
+    public class ConsumerBindingFactory {
+
+        public static final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
 
         public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel inputTarget, AbstractMessageListenerContainer listenerContainer, RetryTemplate retryTemplate) {
             ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener(){
@@ -117,20 +121,32 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                         super.onMessage(jmsMessage, session);
                     }
                     else {
-                        retryTemplate.execute(retryContext -> {
-                            try {
-                                super.onMessage(jmsMessage, session);
-                            } catch (JMSException e) {
-                                logger.error("Failed to send message", e);
+                        retryTemplate.execute(
+                            continueRetryContext -> {
+                                try {
+                                    continueRetryContext.setAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE, jmsMessage);
+                                    super.onMessage(jmsMessage, session);
+                                } catch (JMSException e) {
+                                    logger.error("Failed to send message", e);
+                                    throw new RuntimeException(e);
+                                }
+                                return null;
+                            },
+                            recoverRetryContext -> {
+                                String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
+                                jmsSendingMessageHandlerFactory.template.convertAndSend(
+                                        deadLetterQueueName,
+                                        recoverRetryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE)
+                                );
+                                return null;
                             }
-                            return null;
-                        });
+                        );
                     }
                 }
             };
             listener.setRequestChannel(inputTarget);
 
-            AbstractEndpoint endpoint = new JmsMessageDrivenEndpoint(listenerContainer, listener);
+            JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(listenerContainer, listener);
             DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name, group, inputTarget, endpoint);
             endpoint.setBeanName("inbound." + name);
             endpoint.start();

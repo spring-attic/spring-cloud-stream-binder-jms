@@ -207,18 +207,16 @@ public class SolaceQueueProvisionerIntegrationTest {
     public void provisionDLQ_createsANativeSolaceDLQ() throws Exception {
         String DEATH_LETTER = "I got a letter this morning";
 
-        Optional<String> deadLetterQueue = solaceQueueProvisioner.provisionDeadLetterQueue();
+        String deadLetterQueue = solaceQueueProvisioner.provisionDeadLetterQueue();
 
         //createQueue creates a local reference to the queue, the actual queue has to exist
-        messageProducer.send(
-                createMessage(DEATH_LETTER),
-                DLQ);
+        messageProducer.send(createMessage(DEATH_LETTER), DLQ);
         CountingListener countingListener = listenToQueue(DLQ_NAME);
         countingListener.awaitExpectedMessages();
 
         assertThat(countingListener.getMessages().size(), is(1));
         assertThat(countingListener.getMessages().get(0), is(DEATH_LETTER));
-        assertThat(deadLetterQueue.get(), is(DLQ_NAME));
+        assertThat(deadLetterQueue, is(DLQ_NAME));
 
     }
 
