@@ -190,7 +190,6 @@ public class EndToEndIntegrationTest {
     }
 
     @Test
-    @Ignore
     public void scs_supportsSerializable() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
@@ -207,7 +206,6 @@ public class EndToEndIntegrationTest {
     }
 
     @Test
-    @Ignore
     public void scs_supportsList() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
@@ -224,7 +222,6 @@ public class EndToEndIntegrationTest {
     }
 
     @Test
-    @Ignore
     public void scs_supportsInt() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
@@ -295,6 +292,22 @@ public class EndToEndIntegrationTest {
         @Override
         public String toString() {
             return "SerializableTest<" + value + ">";
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            SerializableTest that = (SerializableTest) o;
+
+            return value.equals(that.value);
+
+        }
+
+        @Override
+        public int hashCode() {
+            return value.hashCode();
         }
     }
 }

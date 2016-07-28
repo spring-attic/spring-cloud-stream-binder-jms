@@ -7,8 +7,10 @@ import org.springframework.cloud.stream.binder.*;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.endpoint.AbstractEndpoint;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
+import org.springframework.integration.handler.AbstractReplyProducingMessageHandler;
 import org.springframework.integration.jms.ChannelPublishingJmsMessageListener;
 import org.springframework.integration.jms.JmsMessageDrivenEndpoint;
 import org.springframework.integration.jms.JmsSendingMessageHandler;
@@ -113,7 +115,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
 
         public static final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
 
-        public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel inputTarget, AbstractMessageListenerContainer listenerContainer, RetryTemplate retryTemplate) {
+        public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel moduleInputChannel, AbstractMessageListenerContainer listenerContainer, RetryTemplate retryTemplate) {
             ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener(){
                 @Override
                 public void onMessage(Message jmsMessage, Session session) throws JMSException {
@@ -144,13 +146,32 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                     }
                 }
             };
-            listener.setRequestChannel(inputTarget);
-
+            listener.setRequestChannel(moduleInputChannel);
+            //TODO: look into the difference between endpoint and adapter (SI research)
             JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(listenerContainer, listener);
-            DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name, group, inputTarget, endpoint);
             endpoint.setBeanName("inbound." + name);
+
+            DirectChannel bridgeToModuleChannel = getBridgeToModuleChannel(name);
+            createAndConnectConvertingBridge(name, moduleInputChannel, bridgeToModuleChannel);
+
+            DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name, group, bridgeToModuleChannel, endpoint);
             endpoint.start();
             return binding;
+        }
+
+        private void createAndConnectConvertingBridge(String name, MessageChannel moduleInputChannel, DirectChannel bridgeToModuleChannel) {
+            ReceivingHandler convertingBridge = new ReceivingHandler();
+            convertingBridge.setOutputChannel(moduleInputChannel);
+            convertingBridge.setBeanName(name + ".convert.bridge");
+            convertingBridge.afterPropertiesSet();
+            bridgeToModuleChannel.subscribe(convertingBridge);
+        }
+
+        private DirectChannel getBridgeToModuleChannel(String name) {
+            DirectChannel bridgeToModuleChannel = new DirectChannel();
+            bridgeToModuleChannel.setBeanFactory(getBeanFactory());
+            bridgeToModuleChannel.setBeanName(name + ".bridge");
+            return bridgeToModuleChannel;
         }
     }
 
@@ -176,7 +197,6 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         }
 
         public JmsSendingMessageHandler build(String name, ProducerProperties producerProperties) {
-            ExpressionParser parser = new SpelExpressionParser();
             final PartitionHandler partitionHandler = new PartitionHandler(getBeanFactory(), JMSMessageChannelBinder.this.evaluationContext, partitionSelector, producerProperties);
             template.setPubSubDomain(true);
             JmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(this.template, producerProperties, partitionHandler, PARTITION_HEADER);
@@ -233,5 +253,30 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
             if(spelConstant.contains("'"))
                 throw new IllegalArgumentException("The value %s contains an illegal character \"'\" ");
         }
+
+    }
+
+    private final class ReceivingHandler extends AbstractReplyProducingMessageHandler {
+
+        private ReceivingHandler() {
+            super();
+            this.setBeanFactory(JMSMessageChannelBinder.this.getBeanFactory());
+        }
+
+        @Override
+        protected Object handleRequestMessage(org.springframework.messaging.Message<?> requestMessage) {
+            return deserializePayloadIfNecessary(requestMessage).toMessage(getMessageBuilderFactory());
+        }
+
+        @Override
+        protected boolean shouldCopyRequestHeaders() {
+			/*
+			TODO: Verify that this statement is actually true in our case
+			 * we've already copied the headers so no need for the ARPMH to do it, and we don't want the content-type
+			 * restored if absent.
+			 */
+            return false;
+        }
+
     }
 }

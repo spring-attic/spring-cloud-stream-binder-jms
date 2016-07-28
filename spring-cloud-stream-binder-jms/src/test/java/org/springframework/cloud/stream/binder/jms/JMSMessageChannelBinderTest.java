@@ -1,7 +1,10 @@
 package org.springframework.cloud.stream.binder.jms;
 
 import org.hamcrest.core.Is;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.DefaultBinding;
 import org.springframework.cloud.stream.binder.PartitionKeyExtractorStrategy;
@@ -31,10 +34,17 @@ import static org.springframework.test.util.ReflectionTestUtils.getField;
 
 public class JMSMessageChannelBinderTest {
 
+    private AbstractApplicationContext mockedApplicationContext;
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
     JMSMessageChannelBinder.JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = mock(JMSMessageChannelBinder.JmsSendingMessageHandlerFactory.class);
     ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
 
+    @Before
+    public void setUp() throws Exception {
+        mockedApplicationContext = mock(AbstractApplicationContext.class);
+        ConfigurableListableBeanFactory beanFactory = mock(ConfigurableListableBeanFactory.class);
+        when(mockedApplicationContext.getBeanFactory()).thenReturn(beanFactory);
+    }
 
     @Test
     public void doBindConsumer_createsListenerAndBinding() throws Exception {
@@ -112,6 +122,7 @@ public class JMSMessageChannelBinderTest {
         when(connectionFactory.createConnection()).thenReturn(connection);
 
         JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(connectionFactory, jmsTemplate, queueProvisioner);
+        jmsMessageChannelBinder.setApplicationContext(mockedApplicationContext);
         DefaultBinding<MessageChannel> messageChannelBinding = (DefaultBinding<MessageChannel>) jmsMessageChannelBinder.doBindConsumer("my channel", "my group", inputTarget, new ConsumerProperties());
         JmsMessageDrivenEndpoint endpoint = (JmsMessageDrivenEndpoint) getField(messageChannelBinding, "endpoint");
         SimpleMessageListenerContainer listenerContainer = (SimpleMessageListenerContainer) getField(endpoint, "listenerContainer");
@@ -130,7 +141,7 @@ public class JMSMessageChannelBinderTest {
         properties.setRequiredGroups("required-group","required-group2");
 
         JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
-        target.setApplicationContext(mock(AbstractApplicationContext.class));
+        target.setApplicationContext(mockedApplicationContext);
         target.doBindProducer("mytopic", outboundBindTarget, properties);
 
         verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("mytopic", "required-group", "required-group2");
@@ -149,7 +160,7 @@ public class JMSMessageChannelBinderTest {
         properties.setRequiredGroups("required-group","required-group2");
 
         JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
-        target.setApplicationContext(mock(AbstractApplicationContext.class));
+        target.setApplicationContext(mockedApplicationContext);
         target.doBindProducer("mytopic", outboundBindTarget, properties);
 
         verify(queueProvisioner, times(1)).provisionTopicAndConsumerGroup("mytopic-0", "required-group-0", "required-group2-0");
