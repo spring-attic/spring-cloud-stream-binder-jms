@@ -2,17 +2,23 @@ package org.springframework.cloud.stream.binder.jms.solace.integration;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.solacesystems.jcsmp.BytesXMLMessage;
+import com.solacesystems.jcsmp.JCSMPException;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.springframework.boot.autoconfigure.jms.JmsProperties;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication.Sender;
+import org.springframework.cloud.stream.binder.jms.util.RepublishMessageRecoverer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.messaging.Message;
 
 import java.io.Serializable;
@@ -30,6 +36,8 @@ import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
+import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.waitFor;
+import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.waitForDeadLetter;
 
 public class EndToEndIntegrationTest {
 
@@ -44,17 +52,20 @@ public class EndToEndIntegrationTest {
 
     private String randomGroupArg1;
     private String randomGroupArg2;
+    private JmsTemplate jmsTemplate;
 
     @Before
-    public void startProducerAndConsumers() {
+    public void configureGroupsAndDestinations() throws JCSMPException {
+        SolaceTestUtils.deprovisionDLQ();
         this.destination = getRandomName("destination");
         randomGroupArg1 = String.format(INPUT_GROUP_FORMAT, getRandomName("group1"));
         randomGroupArg2 = String.format(INPUT_GROUP_FORMAT, getRandomName("group2"));
     }
 
     @After
-    public void stopProducerAndConsumers() {
+    public void stopProducerAndConsumers() throws JCSMPException {
         startedContexts.forEach(ConfigurableApplicationContext::stop);
+        SolaceTestUtils.deprovisionDLQ();
     }
 
     @Test
@@ -116,6 +127,19 @@ public class EndToEndIntegrationTest {
         )));
 
     }
+    @Test
+    public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
+        Sender sender = createSender();
+        createReceiver(randomGroupArg1);
+
+        sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
+
+        BytesXMLMessage bytesXMLMessage = waitForDeadLetter();
+        assertThat(bytesXMLMessage, notNullValue());
+
+        String stacktrace = (String) bytesXMLMessage.getProperties().get(RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE);
+        assertThat(stacktrace, containsString("Your wish is my command"));
+    }
 
     @Test
     public void scs_whenConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
@@ -132,6 +156,9 @@ public class EndToEndIntegrationTest {
             assertThat(handledMessages, empty());
             assertThat(extractPayload(receivedMessages), Matchers.contains(Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION));
         });
+
+        BytesXMLMessage bytesXMLMessage = waitForDeadLetter();
+        assertThat(bytesXMLMessage, notNullValue());
 
     }
 
@@ -242,6 +269,7 @@ public class EndToEndIntegrationTest {
 
         ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class).build().run(arguments);
         startedContexts.add(context);
+        jmsTemplate = context.getBean(JmsTemplate.class);
         return context.getBean(Sender.class);
     }
 
@@ -252,26 +280,6 @@ public class EndToEndIntegrationTest {
         ConfigurableApplicationContext context = new SpringApplicationBuilder(ReceiverApplication.class).build().run(arguments);
         startedContexts.add(context);
         return context.getBean(Receiver.class);
-    }
-
-    public void waitFor(Runnable assertion) throws InterruptedException {
-        waitFor(1000, assertion);
-    }
-
-    public void waitFor(int millis, Runnable assertion) throws InterruptedException {
-        long endTime = System.currentTimeMillis() + millis;
-
-        while (true) {
-            try {
-                assertion.run();
-                return;
-            } catch (AssertionError e) {
-                if (System.currentTimeMillis() > endTime) {
-                    throw e;
-                }
-            }
-            Thread.sleep(millis / 10);
-        }
     }
 
     List<? extends Object> extractPayload(Iterable<Message> messages) {

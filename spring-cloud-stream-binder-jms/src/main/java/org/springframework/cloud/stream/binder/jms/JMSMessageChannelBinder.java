@@ -3,7 +3,9 @@ package org.springframework.cloud.stream.binder.jms;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.binder.*;
+import org.springframework.cloud.stream.binder.jms.util.MessageRecoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -11,20 +13,24 @@ import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.endpoint.AbstractEndpoint;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
 import org.springframework.integration.handler.AbstractReplyProducingMessageHandler;
-import org.springframework.integration.jms.ChannelPublishingJmsMessageListener;
-import org.springframework.integration.jms.JmsMessageDrivenEndpoint;
-import org.springframework.integration.jms.JmsSendingMessageHandler;
+import org.springframework.integration.jms.*;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.support.JmsMessageHeaderAccessor;
 import org.springframework.messaging.*;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.jms.*;
 import javax.jms.Message;
+import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.StringJoiner;
 import java.util.stream.IntStream;
+
 
 public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
 
@@ -33,6 +39,8 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     private JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
     private ListenerContainerFactory listenerContainerFactory;
     private QueueProvisioner queueProvisioner;
+    private MessageRecoverer messageRecoverer;
+
     protected final Log logger = LogFactory.getLog(this.getClass());
 
     public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template, QueueProvisioner queueProvisioner) throws JMSException {
@@ -91,6 +99,11 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         }
     }
 
+    @Autowired
+    public void setMessageRecoverer(MessageRecoverer messageRecoverer) {
+        this.messageRecoverer = messageRecoverer;
+    }
+
     @Component
     public static class ListenerContainerFactory {
 
@@ -135,11 +148,12 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                                 return null;
                             },
                             recoverRetryContext -> {
-                                String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
-                                jmsSendingMessageHandlerFactory.template.convertAndSend(
-                                        deadLetterQueueName,
-                                        recoverRetryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE)
-                                );
+                                if(messageRecoverer != null) {
+                                    Message message = (Message) recoverRetryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
+                                    messageRecoverer.recover(message, recoverRetryContext.getLastThrowable());
+                                }else{
+                                    logger.warn("No message recoverer was configured. Messages will be discarded.");
+                                }
                                 return null;
                             }
                         );
