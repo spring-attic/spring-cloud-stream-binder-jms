@@ -1,4 +1,5 @@
 target
 *.iml
 **/*.jar
+spring-cloud-stream-binder-jms/activemq-data/
 
