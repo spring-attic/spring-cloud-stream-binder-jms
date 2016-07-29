@@ -1,13 +1,29 @@
-package org.springframework.cloud.stream.binder.jms.solace;
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-import com.solacesystems.jcsmp.*;
-import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
-import com.solacesystems.jcsmp.transaction.TransactedSession;
+package org.springframework.cloud.stream.binder.jms.solace;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
+import com.solacesystems.jcsmp.transaction.TransactedSession;
 
 import static com.solacesystems.jcsmp.JCSMPSession.FLAG_IGNORE_DOES_NOT_EXIST;
 import static com.solacesystems.jcsmp.JCSMPSession.WAIT_FOR_CONFIRM;
@@ -55,17 +71,56 @@ public class SolaceTestUtils {
         return countingListener.getMessages().get(0);
     }
 
+    public static void waitFor(Runnable assertion) {
+        waitFor(1000, assertion);
+    }
+
+    public static void waitFor(int millis, Runnable assertion) {
+        long endTime = System.currentTimeMillis() + millis;
+
+        while (true) {
+            try {
+                assertion.run();
+                return;
+            } catch (AssertionError e) {
+                if (System.currentTimeMillis() > endTime) {
+                    throw e;
+                }
+            }
+            try {
+                Thread.sleep(millis / 10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static void waitForItToWork(int millis, Runnable assertion) {
+        long endTime = System.currentTimeMillis() + millis;
+
+        while (true) {
+            try {
+                assertion.run();
+                return;
+            } catch (Exception e) {
+                if (System.currentTimeMillis() > endTime) {
+                    throw e;
+                }
+            }
+            try {
+                Thread.sleep(millis / 10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public static class CountingListener implements XMLMessageListener {
         private final CountDownLatch latch;
 
         private final List<JCSMPException> errors = new ArrayList<>();
 
         private final List<String> payloads = new ArrayList<>();
-
-        public List<BytesXMLMessage> getMessages() {
-            return messages;
-        }
-
         private final List<BytesXMLMessage> messages = new ArrayList<>();
 
         public CountingListener(CountDownLatch latch) {
@@ -74,6 +129,10 @@ public class SolaceTestUtils {
 
         public CountingListener(int expectedMessages) {
             this.latch = new CountDownLatch(expectedMessages);
+        }
+
+        public List<BytesXMLMessage> getMessages() {
+            return messages;
         }
 
         @Override
@@ -137,50 +196,6 @@ public class SolaceTestUtils {
 //            throw new RuntimeException("You shall not pass", e);
         }
 
-    }
-
-    public static void waitFor(Runnable assertion) {
-        waitFor(1000, assertion);
-    }
-
-    public static void waitFor(int millis, Runnable assertion) {
-        long endTime = System.currentTimeMillis() + millis;
-
-        while (true) {
-            try {
-                assertion.run();
-                return;
-            } catch (AssertionError e) {
-                if (System.currentTimeMillis() > endTime) {
-                    throw e;
-                }
-            }
-            try {
-                Thread.sleep(millis / 10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private static void waitForItToWork(int millis, Runnable assertion) {
-        long endTime = System.currentTimeMillis() + millis;
-
-        while (true) {
-            try {
-                assertion.run();
-                return;
-            } catch (Exception e) {
-                if (System.currentTimeMillis() > endTime) {
-                    throw e;
-                }
-            }
-            try {
-                Thread.sleep(millis / 10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
     }
 
 }

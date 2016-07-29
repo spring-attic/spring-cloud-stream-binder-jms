@@ -1,9 +1,30 @@
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.springframework.cloud.stream.binder.jms;
+
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.MessageConsumer;
+import javax.jms.Session;
 
 import org.hamcrest.core.Is;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.beans.factory.BeanFactory;
+
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.DefaultBinding;
@@ -19,25 +40,22 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.retry.support.RetryTemplate;
 
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-import javax.jms.MessageConsumer;
-import javax.jms.Session;
-
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.util.ReflectionTestUtils.getField;
 
-public class JMSMessageChannelBinderTest {
+public class JMSMessageChannelBinderTests {
 
-    private AbstractApplicationContext mockedApplicationContext;
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
     JMSMessageChannelBinder.JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = mock(JMSMessageChannelBinder.JmsSendingMessageHandlerFactory.class);
     ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
+    private AbstractApplicationContext mockedApplicationContext;
 
     @Before
     public void setUp() throws Exception {
@@ -103,7 +121,7 @@ public class JMSMessageChannelBinderTest {
         assertThat(messageListenerContainer.getConnectionFactory(), Is.is(factory));
         assertThat(getField(messageListenerContainer, "pubSubDomain"), Is.is(false));
         assertThat("Transacted is not true. Transacted is required for guaranteed deliveries. " +
-                "In particular, some implementation will require it so they can eventually route the message to the DLQ",
+                        "In particular, some implementation will require it so they can eventually route the message to the DLQ",
                 messageListenerContainer.isSessionTransacted(), is(true));
 
     }
@@ -138,7 +156,7 @@ public class JMSMessageChannelBinderTest {
         QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
         MessageChannel outboundBindTarget = mock(SubscribableChannel.class);
         ProducerProperties properties = new ProducerProperties();
-        properties.setRequiredGroups("required-group","required-group2");
+        properties.setRequiredGroups("required-group", "required-group2");
 
         JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
         target.setApplicationContext(mockedApplicationContext);
@@ -157,7 +175,7 @@ public class JMSMessageChannelBinderTest {
         ProducerProperties properties = new ProducerProperties();
         properties.setPartitionCount(2);
         properties.setPartitionKeyExtractorClass(PartitionKeyExtractorStrategy.class);
-        properties.setRequiredGroups("required-group","required-group2");
+        properties.setRequiredGroups("required-group", "required-group2");
 
         JMSMessageChannelBinder target = new JMSMessageChannelBinder(queueProvisioner, consumerBindingFactory, producerBindingFactory, listenerContainerFactory, jmsSendingMessageHandlerFactory);
         target.setApplicationContext(mockedApplicationContext);

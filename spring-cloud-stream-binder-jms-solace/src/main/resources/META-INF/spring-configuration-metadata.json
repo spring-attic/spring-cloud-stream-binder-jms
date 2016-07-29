@@ -1,9 +1,11 @@
 {
-  "groups": [{
-    "name": "spring.solace",
-    "type": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties",
-    "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
-  }],
+  "groups": [
+    {
+      "name": "spring.solace",
+      "type": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties"
+    }
+  ],
   "properties": [
     {
       "name": "spring.solace.host",

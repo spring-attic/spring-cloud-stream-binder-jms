@@ -1,27 +1,44 @@
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.springframework.cloud.stream.binder.jms.solace.config;
 
-
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+/**
+ * Configuration properties for Solace specific features.
+ *
+ * @author Jonathan Sharpe
+ * @author Joseph Taylor
+ * @author José Carlos Valero
+ * @since 1.1
+ */
 @ConfigurationProperties(prefix = "spring.solace")
 public class SolaceConfigurationProperties {
 
-    /**
-     * Host of solace server e.g. 192.168.99.100
-     */
+    /** Host of solace server e.g. 192.168.99.100 */
     private String host;
 
-    /**
-     * Username, e.g. admin
-     */
+    /** Username, e.g. admin */
     private String username;
 
-    /**
-     * Password, e.g. admin
-     */
+    /** Password, e.g. admin */
     private String password;
 
     /**
@@ -42,7 +59,6 @@ public class SolaceConfigurationProperties {
      * the message and send it directly to the DMQ after a failure scenario. If the message
      * cannot be delivered to the binder (e.g. corrupt message) the broker itself will
      * route it to the DMQ after maxRedeliveryAttempts.
-     *
      */
     @Max(255)
     @Min(0)

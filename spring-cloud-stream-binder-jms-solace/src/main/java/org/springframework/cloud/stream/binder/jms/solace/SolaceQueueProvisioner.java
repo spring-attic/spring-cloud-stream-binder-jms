@@ -1,16 +1,36 @@
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.springframework.cloud.stream.binder.jms.solace;
 
 import com.solacesystems.jcsmp.*;
-import com.solacesystems.jcsmp.Queue;
 import com.solacesystems.jcsmp.impl.DurableTopicEndpointImpl;
 import org.apache.commons.lang.ArrayUtils;
+
 import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 
-import java.util.Optional;
-
-import static com.solacesystems.jcsmp.JCSMPErrorResponseSubcodeEx.SUBSCRIPTION_ALREADY_PRESENT;
-
+/**
+ * {@link QueueProvisioner} for Solace.
+ *
+ * @author Jonathan Sharpe
+ * @author Joseph Taylor
+ * @author José Carlos Valero
+ * @since 1.1
+ */
 public class SolaceQueueProvisioner implements QueueProvisioner {
     private static String DMQ_NAME = "#DEAD_MSG_QUEUE";
 
@@ -21,7 +41,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
     }
 
     @Override
-    public void provisionTopicAndConsumerGroup(String name, String...groups) {
+    public void provisionTopicAndConsumerGroup(String name, String... groups) {
         if (ArrayUtils.isEmpty(groups)) return;
 
         try {
@@ -33,12 +53,12 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
             session.provision(topicEndpoint, null, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
 
-            for(String group : groups){
+            for (String group : groups) {
                 doProvision(session, topic, group);
             }
 
         } catch (JCSMPErrorResponseException e) {
-            if (SUBSCRIPTION_ALREADY_PRESENT != e.getSubcodeEx()) {
+            if (JCSMPErrorResponseSubcodeEx.SUBSCRIPTION_ALREADY_PRESENT != e.getSubcodeEx()) {
                 throw new RuntimeException(e);
             }
         } catch (JCSMPException e) {
@@ -73,7 +93,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
             endpointProperties.setAccessType(EndpointProperties.ACCESSTYPE_NONEXCLUSIVE);
 
             Integer maxRedeliveryAttempts = solaceConfigurationProperties.getMaxRedeliveryAttempts();
-            if(maxRedeliveryAttempts != null && maxRedeliveryAttempts >= 0){
+            if (maxRedeliveryAttempts != null && maxRedeliveryAttempts >= 0) {
                 endpointProperties.setMaxMsgRedelivery(1);
             }
 

@@ -1,27 +1,41 @@
-package org.springframework.cloud.stream.binder.jms.solace;
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-import com.google.common.collect.Iterables;
-import com.solacesystems.jcsmp.*;
-import com.solacesystems.jcsmp.DeliveryMode;
-import com.solacesystems.jcsmp.Queue;
-import com.solacesystems.jcsmp.Topic;
-import com.solacesystems.jcsmp.transaction.TransactedSession;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.CountingListener;
-import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.FailingListener;
-import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+package org.springframework.cloud.stream.binder.jms.solace;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 
+import com.google.common.collect.Iterables;
+import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.transaction.TransactedSession;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.CountingListener;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.FailingListener;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
-public class SolaceQueueProvisionerIntegrationTest {
+public class SolaceQueueProvisionerIntegrationTests {
 
     private SolaceQueueProvisioner solaceQueueProvisioner;
     private JCSMPSession session;
@@ -115,8 +129,9 @@ public class SolaceQueueProvisionerIntegrationTest {
                 .forEach(m -> {
                     try {
                         messageProducer.send(m, topic);
+                    } catch (JCSMPException e) {
+                        throw new RuntimeException(e);
                     }
-                    catch (JCSMPException e) { throw new RuntimeException(e); }
                 });
 
         Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
@@ -189,7 +204,7 @@ public class SolaceQueueProvisionerIntegrationTest {
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
         messageProducer.send(createMessage("hello jimmy"), topic);
-        consumeAndThrowException(consumerGroupName,transactedSession);
+        consumeAndThrowException(consumerGroupName, transactedSession);
 
         String messagePayload = awaitUntilDMQHasAMessage();
 

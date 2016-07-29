@@ -1,6 +1,25 @@
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.springframework.cloud.stream.binder.jms;
 
+import javax.jms.JMSException;
+
 import org.junit.Test;
+
 import org.springframework.cloud.stream.binder.PartitionHandler;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.expression.Expression;
@@ -9,15 +28,12 @@ import org.springframework.integration.handler.ExpressionEvaluatingMessageProces
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import javax.jms.JMSException;
-
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
-
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.util.ReflectionTestUtils.getField;
 
-public class PartitionAwareJmsSendingMessageHandlerTest {
+public class PartitionAwareJmsSendingMessageHandlerTests {
 
     private static final String PARTITION_HEADER = "partition";
     PartitionHandler partitionHandler = mock(PartitionHandler.class);
@@ -26,7 +42,7 @@ public class PartitionAwareJmsSendingMessageHandlerTest {
     private ProducerProperties producerProperties = new ProducerProperties();
     private SpelExpressionParser parser = new SpelExpressionParser();
 
-    public PartitionAwareJmsSendingMessageHandlerTest() throws JMSException {
+    public PartitionAwareJmsSendingMessageHandlerTests() throws JMSException {
     }
 
     @Test
@@ -54,9 +70,8 @@ public class PartitionAwareJmsSendingMessageHandlerTest {
 
         target.setDestinationName("name");
 
-        assertThat(ReflectionTestUtils.getField(target,"destinationName"), is("name"));
+        assertThat(ReflectionTestUtils.getField(target, "destinationName"), is("name"));
     }
-
 
 
     @Test(expected = IllegalArgumentException.class)

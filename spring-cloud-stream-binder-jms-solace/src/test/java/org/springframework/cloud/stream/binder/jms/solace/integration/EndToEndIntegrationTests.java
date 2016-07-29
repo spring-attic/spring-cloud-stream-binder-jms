@@ -1,36 +1,49 @@
-package org.springframework.cloud.stream.binder.jms.solace.integration;
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.solacesystems.jcsmp.BytesXMLMessage;
-import com.solacesystems.jcsmp.JCSMPException;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.springframework.boot.autoconfigure.jms.JmsProperties;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
-import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
-import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
-import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
-import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication.Sender;
-import org.springframework.cloud.stream.binder.jms.util.RepublishMessageRecoverer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.messaging.Message;
+package org.springframework.cloud.stream.binder.jms.solace.integration;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import com.google.common.collect.ImmutableMap;
+import com.solacesystems.jcsmp.BytesXMLMessage;
+import com.solacesystems.jcsmp.JCSMPException;
+import org.hamcrest.Matchers;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
+import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
+import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
+import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
+import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication.Sender;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.messaging.Message;
 
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
@@ -39,17 +52,14 @@ import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.waitFor;
 import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.waitForDeadLetter;
 
-public class EndToEndIntegrationTest {
-
-    private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
-
-    private String destination;
+public class EndToEndIntegrationTests {
 
     private static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
     private static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
     private static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
     private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
-
+    private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
+    private String destination;
     private String randomGroupArg1;
     private String randomGroupArg2;
     private JmsTemplate jmsTemplate;
@@ -127,6 +137,7 @@ public class EndToEndIntegrationTest {
         )));
 
     }
+
     @Test
     public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
         Sender sender = createSender();
@@ -201,7 +212,7 @@ public class EndToEndIntegrationTest {
         sender.send("bar");
         sender.send("baz");
         sender.send("foo");
-        IntStream.range(0,1000).mapToObj(String::valueOf).forEach(sender::send);
+        IntStream.range(0, 1000).mapToObj(String::valueOf).forEach(sender::send);
 
         List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
         List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();

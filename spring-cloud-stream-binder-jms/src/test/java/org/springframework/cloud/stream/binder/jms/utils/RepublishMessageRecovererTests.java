@@ -1,4 +1,27 @@
-package org.springframework.cloud.stream.binder.jms.util;
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.springframework.cloud.stream.binder.jms.utils;
+
+import java.io.File;
+import java.util.Map;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
+import javax.jms.TextMessage;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.activemq.ActiveMQConnectionFactory;
@@ -8,33 +31,29 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+
 import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
-
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-import java.io.File;
-import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
-import static org.springframework.cloud.stream.binder.jms.util.RepublishMessageRecoverer.*;
+import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer.*;
 
-public class RepublishMessageRecovererTest {
+public class RepublishMessageRecovererTests {
 
     static RepublishMessageRecoverer target;
     static RepublishMessageRecoverer additionalHeadersTarget;
-    static JmsTemplate jmsTemplate ;
+    static JmsTemplate jmsTemplate;
     static QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
     private final Message message = createMessage(ImmutableMap.of("fancy", "header"));
+    private final String exceptionMessage = "I am an unhappy exception";
+    private Throwable cause = new RuntimeException(exceptionMessage);
 
     @BeforeClass
-    public static void initTests() throws Exception{
+    public static void initTests() throws Exception {
 
         BrokerService broker = new BrokerService();
 
@@ -60,11 +79,6 @@ public class RepublishMessageRecovererTest {
         Mockito.reset(queueProvisioner);
         when(queueProvisioner.provisionDeadLetterQueue()).thenReturn("dead-letter-queue");
     }
-
-    private final String exceptionMessage = "I am an unhappy exception";
-    private Throwable cause = new RuntimeException(exceptionMessage);
-
-
 
     @Test
     public void recover_provisionsDeadLetterQueue() throws Exception {
@@ -126,17 +140,6 @@ public class RepublishMessageRecovererTest {
         assertThat(message.getStringProperty("additional"), is("extra-header"));
     }
 
-    private static class AdditionalHeadersMessageRecoverer extends RepublishMessageRecoverer{
-        public AdditionalHeadersMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
-            super(queueProvisioner, jmsTemplate);
-        }
-
-        @Override
-        protected Map<? extends String, ? extends Object> additionalHeaders(Message message, Throwable cause) {
-            return ImmutableMap.of("additional", "extra-header");
-        }
-    }
-
     private Message createMessage(final ImmutableMap<String, String> headers) {
         jmsTemplate.send(new MessageCreator() {
             @Override
@@ -153,6 +156,17 @@ public class RepublishMessageRecovererTest {
             }
         });
         return jmsTemplate.receive();
+    }
+
+    private static class AdditionalHeadersMessageRecoverer extends RepublishMessageRecoverer {
+        public AdditionalHeadersMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
+            super(queueProvisioner, jmsTemplate);
+        }
+
+        @Override
+        protected Map<? extends String, ? extends Object> additionalHeaders(Message message, Throwable cause) {
+            return ImmutableMap.of("additional", "extra-header");
+        }
     }
 
 }

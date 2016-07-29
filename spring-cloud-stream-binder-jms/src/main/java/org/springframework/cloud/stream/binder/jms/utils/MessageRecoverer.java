@@ -14,25 +14,26 @@
  *  limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.jms;
+package org.springframework.cloud.stream.binder.jms.utils;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.cloud.stream.binder.Binder;
-import org.springframework.cloud.stream.config.codec.kryo.KryoCodecAutoConfiguration;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import javax.jms.Message;
 
 /**
- * Auto-configuration class to enable the JMS binder.
+ * Interface used to define the recovery strategy once the maximum number
+ * of delivery attempts has been reached.
  *
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero
  * @since 1.1
  */
-@Configuration
-@ConditionalOnMissingBean(Binder.class)
-@Import({JMSChannelBinderConfiguration.class, KryoCodecAutoConfiguration.class})
-public class JMSAutoConfiguration {
+public interface MessageRecoverer {
 
+    /**
+     * Recover from the failure to deliver a message.
+     *
+     * @param undeliveredMessage the message that has not been delivered.
+     * @param cause the reason for the failure to deliver.
+     */
+    void recover(Message undeliveredMessage, Throwable cause);
 }

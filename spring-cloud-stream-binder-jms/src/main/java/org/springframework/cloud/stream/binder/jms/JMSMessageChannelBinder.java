@@ -1,55 +1,87 @@
+/*
+ *  Copyright 2002-2016 the original author or authors.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.springframework.cloud.stream.binder.jms;
+
+import java.util.Arrays;
+import java.util.stream.IntStream;
+import javax.jms.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.binder.*;
-import org.springframework.cloud.stream.binder.jms.util.MessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.expression.Expression;
-import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.endpoint.AbstractEndpoint;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
 import org.springframework.integration.handler.AbstractReplyProducingMessageHandler;
-import org.springframework.integration.jms.*;
+import org.springframework.integration.jms.ChannelPublishingJmsMessageListener;
+import org.springframework.integration.jms.JmsMessageDrivenEndpoint;
+import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
-import org.springframework.jms.support.JmsMessageHeaderAccessor;
-import org.springframework.messaging.*;
-import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.jms.*;
-import javax.jms.Message;
-import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.StringJoiner;
-import java.util.stream.IntStream;
-
-
+/**
+ * Binder definition for JMS.
+ *
+ * @author Jonathan Sharpe
+ * @author Joseph Taylor
+ * @author José Carlos Valero
+ * @since 1.1
+ */
 public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, ConsumerProperties, ProducerProperties> {
 
+    protected final Log logger = LogFactory.getLog(this.getClass());
     private ConsumerBindingFactory consumerBindingFactory;
-    private ProducerBindingFactory producerBindingFactory;
     private JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
     private ListenerContainerFactory listenerContainerFactory;
-    private QueueProvisioner queueProvisioner;
     private MessageRecoverer messageRecoverer;
+    private ProducerBindingFactory producerBindingFactory;
+    private QueueProvisioner queueProvisioner;
 
-    protected final Log logger = LogFactory.getLog(this.getClass());
-
-    public JMSMessageChannelBinder(ConnectionFactory factory, JmsTemplate template, QueueProvisioner queueProvisioner) throws JMSException {
-        this(queueProvisioner, null, new ProducerBindingFactory(), new ListenerContainerFactory(factory), null);
+    public JMSMessageChannelBinder(ConnectionFactory factory,
+                                   JmsTemplate template,
+                                   QueueProvisioner queueProvisioner) throws JMSException {
+        this(queueProvisioner,
+                null,
+                new ProducerBindingFactory(),
+                new ListenerContainerFactory(factory),
+                null);
         this.consumerBindingFactory = new ConsumerBindingFactory();
-        this.jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(template);
+        this.jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(
+                template);
     }
 
-    public JMSMessageChannelBinder(QueueProvisioner queueProvisioner, ConsumerBindingFactory consumerBindingFactory, ProducerBindingFactory producerBindingFactory, ListenerContainerFactory listenerContainerFactory, JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory) throws JMSException {
+    public JMSMessageChannelBinder(QueueProvisioner queueProvisioner,
+                                   ConsumerBindingFactory consumerBindingFactory,
+                                   ProducerBindingFactory producerBindingFactory,
+                                   ListenerContainerFactory listenerContainerFactory,
+                                   JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory
+    ) throws JMSException {
+
         this.consumerBindingFactory = consumerBindingFactory;
         this.producerBindingFactory = producerBindingFactory;
         this.jmsSendingMessageHandlerFactory = jmsSendingMessageHandlerFactory;
@@ -61,41 +93,67 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
      * JMS Consumer - consumes JMS messages and writes them to the inputTarget, so it's an input to our Receiver application (Sink.INPUT)
      */
     @Override
-    protected Binding<MessageChannel> doBindConsumer(String name, String group, MessageChannel inputTarget, ConsumerProperties properties) {
+    protected Binding<MessageChannel> doBindConsumer(String name,
+                                                     String group,
+                                                     MessageChannel inputTarget,
+                                                     ConsumerProperties properties) {
         String groupName = buildRelativeQueueName(group, properties);
         String topicName = buildRelativeQueueName(name, properties);
         queueProvisioner.provisionTopicAndConsumerGroup(topicName, groupName);
-        AbstractMessageListenerContainer listenerContainer = listenerContainerFactory.build(groupName);
-        DefaultBinding<MessageChannel> binding = consumerBindingFactory.build(name, group, inputTarget, listenerContainer, buildRetryTemplateIfRetryEnabled(properties));
+        AbstractMessageListenerContainer listenerContainer = listenerContainerFactory.build(
+                groupName);
+        DefaultBinding<MessageChannel> binding = consumerBindingFactory.build(
+                name,
+                group,
+                inputTarget,
+                listenerContainer,
+                buildRetryTemplateIfRetryEnabled(properties));
         return binding;
     }
 
-    private String buildRelativeQueueName(String group, ConsumerProperties properties) {
-        return properties.isPartitioned() ? String.format("%s-%s", group, properties.getInstanceIndex()) : group;
+    private String buildRelativeQueueName(String group,
+                                          ConsumerProperties properties) {
+        return properties.isPartitioned() ? String.format("%s-%s",
+                group,
+                properties.getInstanceIndex()) : group;
     }
 
     /**
      * JMS Producer - consumes Spring from the outboundBindTarget messages and writes them to JMS, so it's an output from our Sender application (Source.OUTPUT)
      */
     @Override
-    protected Binding<MessageChannel> doBindProducer(String name, MessageChannel outboundBindTarget, ProducerProperties properties) {
+    protected Binding<MessageChannel> doBindProducer(String name,
+                                                     MessageChannel outboundBindTarget,
+                                                     ProducerProperties properties) {
         provisionQueuesAndTopics(name, properties);
-        JmsSendingMessageHandler handler = jmsSendingMessageHandlerFactory.build(name, properties);
-        DefaultBinding<MessageChannel> messageChannelDefaultBinding = producerBindingFactory.build(name, outboundBindTarget, handler, getBeanFactory());
+        JmsSendingMessageHandler handler = jmsSendingMessageHandlerFactory.build(
+                name,
+                properties);
+        DefaultBinding<MessageChannel> messageChannelDefaultBinding = producerBindingFactory.build(
+                name,
+                outboundBindTarget,
+                handler,
+                getBeanFactory());
 
         return messageChannelDefaultBinding;
     }
 
-    private void provisionQueuesAndTopics(String name, ProducerProperties properties) {
+    private void provisionQueuesAndTopics(String name,
+                                          ProducerProperties properties) {
         if (properties.isPartitioned()) {
-            IntStream.range(0,properties.getPartitionCount()).forEach(index -> {
+            IntStream.range(0,
+                    properties.getPartitionCount()).forEach(index -> {
                 String[] requiredPartitionGroupNames = Arrays.stream(properties.getRequiredGroups())
                         .map(group -> String.format("%s-%s", group, index))
                         .toArray(size -> new String[size]);
-                queueProvisioner.provisionTopicAndConsumerGroup(String.format("%s-%s", name, index), requiredPartitionGroupNames);
+                queueProvisioner.provisionTopicAndConsumerGroup(String.format(
+                        "%s-%s",
+                        name,
+                        index), requiredPartitionGroupNames);
             });
         } else {
-            queueProvisioner.provisionTopicAndConsumerGroup(name, properties.getRequiredGroups());
+            queueProvisioner.provisionTopicAndConsumerGroup(name,
+                    properties.getRequiredGroups());
         }
     }
 
@@ -104,6 +162,9 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         this.messageRecoverer = messageRecoverer;
     }
 
+    /**
+     * Factory to create Jms ListenerContainer
+     */
     @Component
     public static class ListenerContainerFactory {
 
@@ -123,57 +184,100 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         }
     }
 
+    /**
+     * Factory to create bindings between Spring integration and JMS.
+     */
+    static class ProducerBindingFactory {
 
+        public DefaultBinding<MessageChannel> build(String name,
+                                                    MessageChannel outboundBindTarget,
+                                                    JmsSendingMessageHandler handler,
+                                                    BeanFactory beanFactory) {
+            AbstractEndpoint consumer = new EventDrivenConsumer((SubscribableChannel) outboundBindTarget,
+                    handler);
+            consumer.setBeanFactory(beanFactory);
+            consumer.setBeanName("outbound." + name);
+            consumer.afterPropertiesSet();
+            consumer.start();
+            return new DefaultBinding<>(name,
+                    null,
+                    outboundBindTarget,
+                    consumer);
+        }
+    }
+
+    /**
+     * Factory to create bindings between JMS and Spring integration.
+     */
     public class ConsumerBindingFactory {
 
         public static final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
 
-        public DefaultBinding<MessageChannel> build(String name, String group, MessageChannel moduleInputChannel, AbstractMessageListenerContainer listenerContainer, RetryTemplate retryTemplate) {
-            ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener(){
+        public DefaultBinding<MessageChannel> build(String name,
+                                                    String group,
+                                                    MessageChannel moduleInputChannel,
+                                                    AbstractMessageListenerContainer listenerContainer,
+                                                    RetryTemplate retryTemplate) {
+            ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener() {
                 @Override
-                public void onMessage(Message jmsMessage, Session session) throws JMSException {
+                public void onMessage(Message jmsMessage,
+                                      Session session) throws JMSException {
                     if (retryTemplate == null) {
                         super.onMessage(jmsMessage, session);
-                    }
-                    else {
+                    } else {
                         retryTemplate.execute(
-                            continueRetryContext -> {
-                                try {
-                                    continueRetryContext.setAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE, jmsMessage);
-                                    super.onMessage(jmsMessage, session);
-                                } catch (JMSException e) {
-                                    logger.error("Failed to send message", e);
-                                    throw new RuntimeException(e);
+                                continueRetryContext -> {
+                                    try {
+                                        continueRetryContext.setAttribute(
+                                                RETRY_CONTEXT_MESSAGE_ATTRIBUTE,
+                                                jmsMessage);
+                                        super.onMessage(jmsMessage, session);
+                                    } catch (JMSException e) {
+                                        logger.error("Failed to send message",
+                                                e);
+                                        throw new RuntimeException(e);
+                                    }
+                                    return null;
+                                },
+                                recoverRetryContext -> {
+                                    if (messageRecoverer != null) {
+                                        Message message = (Message) recoverRetryContext.getAttribute(
+                                                RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
+                                        messageRecoverer.recover(message,
+                                                recoverRetryContext.getLastThrowable());
+                                    } else {
+                                        logger.warn(
+                                                "No message recoverer was configured. Messages will be discarded.");
+                                    }
+                                    return null;
                                 }
-                                return null;
-                            },
-                            recoverRetryContext -> {
-                                if(messageRecoverer != null) {
-                                    Message message = (Message) recoverRetryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
-                                    messageRecoverer.recover(message, recoverRetryContext.getLastThrowable());
-                                }else{
-                                    logger.warn("No message recoverer was configured. Messages will be discarded.");
-                                }
-                                return null;
-                            }
                         );
                     }
                 }
             };
             listener.setRequestChannel(moduleInputChannel);
             //TODO: look into the difference between endpoint and adapter (SI research)
-            JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(listenerContainer, listener);
+            JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(
+                    listenerContainer,
+                    listener);
             endpoint.setBeanName("inbound." + name);
 
             DirectChannel bridgeToModuleChannel = getBridgeToModuleChannel(name);
-            createAndConnectConvertingBridge(name, moduleInputChannel, bridgeToModuleChannel);
+            createAndConnectConvertingBridge(name,
+                    moduleInputChannel,
+                    bridgeToModuleChannel);
 
-            DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name, group, bridgeToModuleChannel, endpoint);
+            DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name,
+                    group,
+                    bridgeToModuleChannel,
+                    endpoint);
             endpoint.start();
             return binding;
         }
 
-        private void createAndConnectConvertingBridge(String name, MessageChannel moduleInputChannel, DirectChannel bridgeToModuleChannel) {
+        private void createAndConnectConvertingBridge(String name,
+                                                      MessageChannel moduleInputChannel,
+                                                      DirectChannel bridgeToModuleChannel) {
             ReceivingHandler convertingBridge = new ReceivingHandler();
             convertingBridge.setOutputChannel(moduleInputChannel);
             convertingBridge.setBeanName(name + ".convert.bridge");
@@ -189,19 +293,9 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
         }
     }
 
-    static class ProducerBindingFactory {
-
-
-        public DefaultBinding<MessageChannel> build(String name, MessageChannel outboundBindTarget, JmsSendingMessageHandler handler, BeanFactory beanFactory) {
-            AbstractEndpoint consumer = new EventDrivenConsumer((SubscribableChannel) outboundBindTarget, handler);
-            consumer.setBeanFactory(beanFactory);
-            consumer.setBeanName("outbound." + name);
-            consumer.afterPropertiesSet();
-            consumer.start();
-            return new DefaultBinding<>(name, null, outboundBindTarget, consumer);
-        }
-    }
-
+    /**
+     * Factory to create JMS message handlers
+     */
     class JmsSendingMessageHandlerFactory {
 
         private final JmsTemplate template;
@@ -210,23 +304,43 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
             this.template = template;
         }
 
-        public JmsSendingMessageHandler build(String name, ProducerProperties producerProperties) {
-            final PartitionHandler partitionHandler = new PartitionHandler(getBeanFactory(), JMSMessageChannelBinder.this.evaluationContext, partitionSelector, producerProperties);
+        public JmsSendingMessageHandler build(String name,
+                                              ProducerProperties producerProperties) {
+            final PartitionHandler partitionHandler = new PartitionHandler(
+                    getBeanFactory(),
+                    JMSMessageChannelBinder.this.evaluationContext,
+                    partitionSelector,
+                    producerProperties
+            );
             template.setPubSubDomain(true);
-            JmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(this.template, producerProperties, partitionHandler, PARTITION_HEADER);
+            JmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(
+                    this.template,
+                    producerProperties,
+                    partitionHandler,
+                    PARTITION_HEADER);
             handler.setDestinationName(name);
             return handler;
         }
     }
 
-    public class PartitionAwareJmsSendingMessageHandler extends JmsSendingMessageHandler{
+    /**
+     * Extension of {@link JmsSendingMessageHandler}, with partition awareness.
+     *
+     * <p>Whenever a destination name is set, it builds up a SpEL expression
+     * using the partition index of the message to route it to the appropriate
+     * partition.
+     */
+    public class PartitionAwareJmsSendingMessageHandler extends JmsSendingMessageHandler {
 
 
         private final ProducerProperties producerProperties;
-        private PartitionHandler partitionHandler;
         private final String partitionHeaderName;
+        private PartitionHandler partitionHandler;
 
-        public PartitionAwareJmsSendingMessageHandler(JmsTemplate jmsTemplate, ProducerProperties producerProperties, PartitionHandler partitionHandler, String partitionHeaderName) {
+        public PartitionAwareJmsSendingMessageHandler(JmsTemplate jmsTemplate,
+                                                      ProducerProperties producerProperties,
+                                                      PartitionHandler partitionHandler,
+                                                      String partitionHeaderName) {
             super(jmsTemplate);
             this.producerProperties = producerProperties;
             sanitizeSpelConstant(partitionHeaderName);
@@ -243,33 +357,41 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                         this.partitionHandler.determinePartition(message));
             }
             messageValues.setPayload(message.getPayload());
-            super.handleMessageInternal(messageValues.toMessage(getMessageBuilderFactory()));
+            super.handleMessageInternal(messageValues.toMessage(
+                    getMessageBuilderFactory()));
         }
 
         @Override
         public void setDestination(Destination destination) {
-            throw new UnsupportedOperationException("Destination is not supported. Please use destination name instead");
+            throw new UnsupportedOperationException(
+                    "Destination is not supported. Please use destination name instead");
         }
 
         @Override
         public void setDestinationName(String destinationName) {
-            if(!producerProperties.isPartitioned()){
+            if (!producerProperties.isPartitioned()) {
                 super.setDestinationName(destinationName);
-            }else{
+            } else {
                 sanitizeSpelConstant(destinationName);
                 Expression destinationExpression = new SpelExpressionParser()
-                        .parseExpression(String.format("'%s-' + headers['%s']", destinationName, partitionHeaderName));
+                        .parseExpression(String.format("'%s-' + headers['%s']",
+                                destinationName,
+                                partitionHeaderName));
                 super.setDestinationExpression(destinationExpression);
             }
         }
 
-        private void sanitizeSpelConstant(String spelConstant){
-            if(spelConstant.contains("'"))
-                throw new IllegalArgumentException("The value %s contains an illegal character \"'\" ");
+        private void sanitizeSpelConstant(String spelConstant) {
+            if (spelConstant.contains("'"))
+                throw new IllegalArgumentException(
+                        "The value %s contains an illegal character \"'\" ");
         }
 
     }
 
+    /**
+     * Receiving handler to deserialize message payload as needed.
+     */
     private final class ReceivingHandler extends AbstractReplyProducingMessageHandler {
 
         private ReceivingHandler() {
@@ -279,15 +401,16 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
 
         @Override
         protected Object handleRequestMessage(org.springframework.messaging.Message<?> requestMessage) {
-            return deserializePayloadIfNecessary(requestMessage).toMessage(getMessageBuilderFactory());
+            return deserializePayloadIfNecessary(requestMessage).toMessage(
+                    getMessageBuilderFactory());
         }
 
         @Override
         protected boolean shouldCopyRequestHeaders() {
-			/*
-			TODO: Verify that this statement is actually true in our case
-			 * we've already copied the headers so no need for the ARPMH to do it, and we don't want the content-type
+            /*
+             * we've already copied the headers so no need for the ARPMH to do it, and we don't want the content-type
 			 * restored if absent.
+			 * TODO: Verify that this statement is actually true in our case
 			 */
             return false;
         }
