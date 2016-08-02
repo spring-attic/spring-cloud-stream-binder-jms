@@ -68,7 +68,6 @@ public class EndToEndIntegrationTests {
     private static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
     private static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
     private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
-    private static final String MAX_ATTEMPTS_2 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=2";
     private static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
     private static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
     private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
@@ -154,7 +153,7 @@ public class EndToEndIntegrationTests {
     @Test
     public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
         Sender sender = createSender();
-        createReceiver(randomGroupArg1, MAX_ATTEMPTS_2);
+        createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
         new SolaceQueueProvisioner(SolaceTestUtils.getSolaceProperties()).provisionDeadLetterQueue();
 
@@ -194,19 +193,19 @@ public class EndToEndIntegrationTests {
     }
 
     @Test
-    public void scs_maxAttempts1_preventsBinderRetry() throws Exception {
+    public void scs_maxAttempts1_preventsRetry() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
         sender.send(Receiver.EXCEPTION_REQUEST);
 
-        Thread.sleep(5000);
+        Thread.sleep(500);
         assertThat(receiver.getHandledMessages(), hasSize(0));
 
-        //we always get the retry from the solace broker
-        assertThat(receiver.getReceivedMessages(), hasSize(2));
+        //we don't get a retry from the broker because we accept the message and DLQ it ourselves
+        assertThat(receiver.getReceivedMessages(), hasSize(1));
         assertThat(extractStringPayload(receiver.getReceivedMessages()),
-                contains(Receiver.EXCEPTION_REQUEST, Receiver.EXCEPTION_REQUEST));
+                contains(Receiver.EXCEPTION_REQUEST));
     }
 
     @Test
@@ -249,7 +248,7 @@ public class EndToEndIntegrationTests {
     @Test
     public void scs_supportsSerializable() throws Exception {
         Sender sender = createSender();
-        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_2);
+        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
         SerializableTest serializableTest = new SerializableTest("some value");
         sender.send(serializableTest);

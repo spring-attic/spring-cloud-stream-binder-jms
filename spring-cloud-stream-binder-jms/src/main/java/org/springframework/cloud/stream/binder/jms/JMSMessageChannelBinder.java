@@ -42,6 +42,8 @@ import org.springframework.jms.listener.SimpleMessageListenerContainer;
 import org.springframework.jms.support.converter.SimpleMessageConverter;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.SubscribableChannel;
+import org.springframework.retry.backoff.ExponentialBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
@@ -108,8 +110,21 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                 group,
                 inputTarget,
                 listenerContainer,
-                buildRetryTemplateIfRetryEnabled(properties));
+                getRetryTemplate(properties));
         return binding;
+    }
+
+    private RetryTemplate getRetryTemplate(ConsumerProperties properties) {
+        RetryTemplate template = new RetryTemplate();
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
+        retryPolicy.setMaxAttempts(properties.getMaxAttempts());
+        ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
+        backOffPolicy.setInitialInterval(properties.getBackOffInitialInterval());
+        backOffPolicy.setMultiplier(properties.getBackOffMultiplier());
+        backOffPolicy.setMaxInterval(properties.getBackOffMaxInterval());
+        template.setRetryPolicy(retryPolicy);
+        template.setBackOffPolicy(backOffPolicy);
+        return template;
     }
 
     private String buildRelativeQueueName(String group,
@@ -223,37 +238,33 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                 @Override
                 public void onMessage(Message jmsMessage,
                                       Session session) throws JMSException {
-                    if (retryTemplate == null) {
-                        super.onMessage(jmsMessage, session);
-                    } else {
-                        retryTemplate.execute(
-                                continueRetryContext -> {
-                                    try {
-                                        continueRetryContext.setAttribute(
-                                                RETRY_CONTEXT_MESSAGE_ATTRIBUTE,
-                                                jmsMessage);
-                                        super.onMessage(jmsMessage, session);
-                                    } catch (JMSException e) {
-                                        logger.error("Failed to send message",
-                                                e);
-                                        throw new RuntimeException(e);
-                                    }
-                                    return null;
-                                },
-                                recoverRetryContext -> {
-                                    if (messageRecoverer != null) {
-                                        Message message = (Message) recoverRetryContext.getAttribute(
-                                                RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
-                                        messageRecoverer.recover(message,
-                                                recoverRetryContext.getLastThrowable());
-                                    } else {
-                                        logger.warn(
-                                                "No message recoverer was configured. Messages will be discarded.");
-                                    }
-                                    return null;
+                    retryTemplate.execute(
+                            continueRetryContext -> {
+                                try {
+                                    continueRetryContext.setAttribute(
+                                            RETRY_CONTEXT_MESSAGE_ATTRIBUTE,
+                                            jmsMessage);
+                                    super.onMessage(jmsMessage, session);
+                                } catch (JMSException e) {
+                                    logger.error("Failed to send message",
+                                            e);
+                                    throw new RuntimeException(e);
                                 }
-                        );
-                    }
+                                return null;
+                            },
+                            recoverRetryContext -> {
+                                if (messageRecoverer != null) {
+                                    Message message = (Message) recoverRetryContext.getAttribute(
+                                            RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
+                                    messageRecoverer.recover(message,
+                                            recoverRetryContext.getLastThrowable());
+                                } else {
+                                    logger.warn(
+                                            "No message recoverer was configured. Messages will be discarded.");
+                                }
+                                return null;
+                            }
+                    );
                 }
             };
 
