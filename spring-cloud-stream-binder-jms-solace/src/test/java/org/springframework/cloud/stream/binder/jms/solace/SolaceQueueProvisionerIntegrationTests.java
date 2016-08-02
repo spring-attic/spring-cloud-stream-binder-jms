@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.stream.binder.jms.solace;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
@@ -28,20 +27,19 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.springframework.beans.factory.config.YamlMapFactoryBean;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
-import org.springframework.boot.bind.YamlConfigurationFactory;
-import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.CountingListener;
-import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.FailingListener;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.RollbackListener;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
-import org.springframework.core.io.ClassPathResource;
 
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.assertThat;
+import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.DLQ_NAME;
 
 public class SolaceQueueProvisionerIntegrationTests {
+
+    public static final String TEXT_CONTENT = "some text content";
+    public static final String MORE_TEXT_CONTENT = "some more text content";
 
     private SolaceQueueProvisioner solaceQueueProvisioner;
     private JCSMPSession session;
@@ -69,13 +67,13 @@ public class SolaceQueueProvisionerIntegrationTests {
         String consumerGroupName = getRandomName("consumerGroup");
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
-        messageProducer.send(createMessage("hello jimmy"), topic);
+        messageProducer.send(createMessage(TEXT_CONTENT), topic);
         CountingListener countingListener = listenToQueue(consumerGroupName);
 
         countingListener.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains("hello jimmy"));
+        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT));
     }
 
     /**
@@ -89,7 +87,7 @@ public class SolaceQueueProvisionerIntegrationTests {
         //provision just the topic
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName());
 
-        messageProducer.send(createMessage("hello jimmy"), topic);
+        messageProducer.send(createMessage(TEXT_CONTENT), topic);
 
         String consumerGroupName = getRandomName("consumerGroup");
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
@@ -108,7 +106,7 @@ public class SolaceQueueProvisionerIntegrationTests {
 
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroup1Name, consumerGroup2Name);
 
-        messageProducer.send(createMessage("hello jimmy"), topic);
+        messageProducer.send(createMessage(TEXT_CONTENT), topic);
 
         CountingListener countingListener = listenToQueue(consumerGroup1Name);
         CountingListener countingListener2 = listenToQueue(consumerGroup2Name);
@@ -117,10 +115,10 @@ public class SolaceQueueProvisionerIntegrationTests {
         countingListener2.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains("hello jimmy"));
+        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT));
 
         assertThat(countingListener2.getErrors(), empty());
-        assertThat(countingListener2.getPayloads(), contains("hello jimmy"));
+        assertThat(countingListener2.getPayloads(), contains(TEXT_CONTENT));
     }
 
     @Test
@@ -141,28 +139,21 @@ public class SolaceQueueProvisionerIntegrationTests {
                     }
                 });
 
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
-
-        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
-        consumerFlowProperties.setEndpoint(queue);
+        ConsumerFlowProperties consumerFlowProperties = createConsumerFlowProperties(
+                consumerGroupName);
 
         CountDownLatch latch = new CountDownLatch(numberOfMessages);
         CountingListener countingListener = new CountingListener(latch);
-
-        Queue queue2 = JCSMPFactory.onlyInstance().createQueue(consumerGroupName);
-        ConsumerFlowProperties consumerFlowProperties2 = new ConsumerFlowProperties();
-        consumerFlowProperties2.setEndpoint(queue2);
         CountingListener countingListener2 = new CountingListener(latch);
 
         JCSMPSession session = SolaceTestUtils.createSession();
         JCSMPSession session2 = SolaceTestUtils.createSession();
 
         FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
-        FlowReceiver consumer2 = session2.createFlow(countingListener2, consumerFlowProperties2);
+        FlowReceiver consumer2 = session2.createFlow(countingListener2, consumerFlowProperties);
 
         consumer.start();
         consumer2.start();
-
 
         latch.await();
 
@@ -173,74 +164,71 @@ public class SolaceQueueProvisionerIntegrationTests {
 
         assertThat("listener one got all the messages!", countingListener.getPayloads(), iterableWithSize(lessThan(numberOfMessages)));
         assertThat("listener two got all the messages!", countingListener2.getPayloads(), iterableWithSize(lessThan(numberOfMessages)));
-
-        System.out.println(String.format("boomba! %d %d", countingListener.getPayloads().size(), countingListener2.getPayloads().size()));
     }
 
     @Test
     public void provision_whenASecondSubscriptionIsAdded_itGetsSubsequentMessages() throws Exception {
         String firstConsumerGroup = getRandomName("consumerGroup1");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), firstConsumerGroup);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(),
+                firstConsumerGroup);
 
-        messageProducer.send(createMessage("message one"), topic);
+        messageProducer.send(createMessage(TEXT_CONTENT), topic);
         CountingListener countingListener = listenToQueue(firstConsumerGroup, 2);
 
         String secondConsumerGroup = getRandomName("consumerGroup2");
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), secondConsumerGroup);
+        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(),
+                secondConsumerGroup);
 
-        messageProducer.send(createMessage("message two"), topic);
+        messageProducer.send(createMessage(MORE_TEXT_CONTENT), topic);
         CountingListener countingListener2 = listenToQueue(secondConsumerGroup);
 
         countingListener.awaitExpectedMessages();
         countingListener2.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains("message one", "message two"));
+        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT,
+                MORE_TEXT_CONTENT));
 
         assertThat(countingListener2.getErrors(), empty());
-        assertThat(countingListener2.getPayloads(), contains("message two"));
+        assertThat(countingListener2.getPayloads(), contains(MORE_TEXT_CONTENT));
     }
 
     @Test
-    public void provision_whenMaxRetryAttemptsGreaterThan0_shouldSetMRAInQueueAndProvisionDMQ() throws Exception {
-        solaceConfigurationProperties.setMaxRedeliveryAttempts(1);
+    public void provision_whenMaxRedeliveryAttemptsNonzero_shouldRetryAndThenSendToDLQ() throws Exception {
+        int maxRetries = 1;
+        solaceConfigurationProperties.setMaxRedeliveryAttempts(maxRetries);
+
+        SolaceQueueProvisioner reconfiguredProvisioner = new SolaceQueueProvisioner(
+                solaceConfigurationProperties);
+
         TransactedSession transactedSession = session.createTransactedSession();
         String consumerGroupName = getRandomName("consumerGroup");
+        reconfiguredProvisioner.provisionDeadLetterQueue();
+        reconfiguredProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
-        solaceQueueProvisioner.provisionDeadLetterQueue();
-        solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
+        messageProducer.send(createMessage(TEXT_CONTENT), topic);
+        RollbackListener rollbackListener = listenAndRollback(consumerGroupName,
+                transactedSession);
+        CountingListener countingListener = listenToQueue(DLQ_NAME, 1000);
 
-        messageProducer.send(createMessage("hello jimmy"), topic);
-        consumeAndThrowException(consumerGroupName, transactedSession);
-
-        String messagePayload = awaitUntilDMQHasAMessage();
-
-        assertThat(messagePayload, is("hello jimmy"));
+        countingListener.awaitExpectedMessages();
+        assertThat(rollbackListener.getReceivedMessageCount(), is(maxRetries + 1));
+        assertThat(countingListener.getPayloads().get(0), is(TEXT_CONTENT));
     }
 
     @Test
-    public void provisionDLQ_createsANativeSolaceDLQ() throws Exception {
-        String DEATH_LETTER = "I got a letter this morning, what do you reckon it read";
-
+    public void provisionDLQ_createsANativeSolaceQueue() throws Exception {
         String deadLetterQueue = solaceQueueProvisioner.provisionDeadLetterQueue();
 
         //createQueue creates a local reference to the queue, the actual queue has to exist
-        messageProducer.send(createMessage(DEATH_LETTER), SolaceTestUtils.DLQ);
-        CountingListener countingListener = listenToQueue(SolaceTestUtils.DLQ_NAME);
+        messageProducer.send(createMessage(TEXT_CONTENT), SolaceTestUtils.DLQ);
+        CountingListener countingListener = listenToQueue(DLQ_NAME);
         countingListener.awaitExpectedMessages();
 
         assertThat(countingListener.getPayloads().size(), is(1));
-        assertThat(countingListener.getPayloads().get(0), is(DEATH_LETTER));
-        assertThat(deadLetterQueue, is(SolaceTestUtils.DLQ_NAME));
+        assertThat(countingListener.getPayloads().get(0), is(TEXT_CONTENT));
+        assertThat(deadLetterQueue, is(DLQ_NAME));
 
-    }
-
-    private String awaitUntilDMQHasAMessage() throws JCSMPException, InterruptedException {
-        CountingListener countingListener = listenToQueue("#DEAD_MSG_QUEUE");
-
-        countingListener.awaitExpectedMessages();
-
-        return countingListener.getPayloads().get(0);
     }
 
     private CountingListener listenToQueue(String queueName) throws JCSMPException {
@@ -248,28 +236,33 @@ public class SolaceQueueProvisionerIntegrationTests {
     }
 
     private CountingListener listenToQueue(String queueName, int expectedMessages) throws JCSMPException {
-        Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
-
-        ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
-        consumerFlowProperties.setEndpoint(queue);
+        ConsumerFlowProperties consumerFlowProperties = createConsumerFlowProperties(
+                queueName);
 
         CountingListener countingListener = new CountingListener(expectedMessages);
         FlowReceiver consumer = session.createFlow(countingListener, consumerFlowProperties);
         consumer.start();
+
         return countingListener;
     }
 
-    private FailingListener consumeAndThrowException(String queueName, TransactedSession transactedSession) throws JCSMPException {
+    private RollbackListener listenAndRollback(String queueName, TransactedSession transactedSession) throws JCSMPException {
+        ConsumerFlowProperties consumerFlowProperties = createConsumerFlowProperties(
+                queueName);
+
+        RollbackListener failingListener = new RollbackListener(transactedSession);
+        FlowReceiver consumer = transactedSession.createFlow(failingListener, consumerFlowProperties, new EndpointProperties());
+        consumer.start();
+
+        return failingListener;
+    }
+
+    private ConsumerFlowProperties createConsumerFlowProperties(String queueName) {
         Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
 
         ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
         consumerFlowProperties.setEndpoint(queue);
-
-        FailingListener failingListener = new FailingListener(transactedSession);
-        EndpointProperties endpointProperties = new EndpointProperties();
-        FlowReceiver consumer = transactedSession.createFlow(failingListener, consumerFlowProperties, endpointProperties);
-        consumer.start();
-        return failingListener;
+        return consumerFlowProperties;
     }
 
     private BytesXMLMessage createMessage(String userData) {
@@ -277,7 +270,6 @@ public class SolaceQueueProvisionerIntegrationTests {
         message.setDeliveryMode(DeliveryMode.PERSISTENT);
         message.setDMQEligible(true);
         message.writeBytes(userData.getBytes());
-        message.writeAttachment("i am an attachment".getBytes());
         return message;
     }
 

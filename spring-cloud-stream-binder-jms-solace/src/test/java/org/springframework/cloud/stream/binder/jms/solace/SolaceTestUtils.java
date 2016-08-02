@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
@@ -205,30 +206,34 @@ public class SolaceTestUtils {
         }
     }
 
-    public static class FailingListener implements XMLMessageListener {
+    public static class RollbackListener implements XMLMessageListener {
+
+        private AtomicInteger receivedMessageCount = new AtomicInteger();
 
         private TransactedSession transactedSession;
 
-        public FailingListener(TransactedSession transactedSession) {
-
+        public RollbackListener(TransactedSession transactedSession) {
             this.transactedSession = transactedSession;
         }
 
         @Override
         public void onReceive(BytesXMLMessage bytesXMLMessage) {
+            receivedMessageCount.incrementAndGet();
             try {
                 transactedSession.rollback();
             } catch (JCSMPException e) {
                 e.printStackTrace();
             }
-            throw new RuntimeException("You shall not pass");
         }
 
         @Override
         public void onException(JCSMPException e) {
-//            throw new RuntimeException("You shall not pass", e);
+
         }
 
+        public int getReceivedMessageCount() {
+            return receivedMessageCount.get();
+        }
     }
 
 }
