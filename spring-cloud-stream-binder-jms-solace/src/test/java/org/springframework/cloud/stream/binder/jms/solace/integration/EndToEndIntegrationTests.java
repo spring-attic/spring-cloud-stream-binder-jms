@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -29,7 +31,6 @@ import java.util.stream.StreamSupport;
 import com.google.common.collect.ImmutableMap;
 import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.JCSMPException;
-import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,15 +39,12 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
-import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
-import org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication.Sender;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.jms.core.JmsTemplate;
 import org.springframework.messaging.Message;
 
 import static org.hamcrest.Matchers.*;
@@ -58,10 +56,21 @@ import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils
 
 public class EndToEndIntegrationTests {
 
+    private static final String[] MESSAGE_TEXTS = {
+            "first message test content",
+            "second message text content",
+            "third message text content",
+            "fourth message text content"
+    };
+    private static final String HEADER_KEY = "some-custom-header-key";
+    private static final String HEADER_VALUE = "some-custom-header-value";
     private static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
     private static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
     private static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
     private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
+    private static final String MAX_ATTEMPTS_2 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=2";
+    private static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
+    private static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
     private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
     private String destination;
     private String randomGroupArg1;
@@ -87,11 +96,7 @@ public class EndToEndIntegrationTests {
         Receiver receiver = createReceiver(randomGroupArg1);
         Receiver receiver2 = createReceiver(randomGroupArg2);
 
-        sender.send("Joseph");
-        sender.send("Jack");
-        sender.send("123");
-        sender.send("hi world");
-
+        Stream.of(MESSAGE_TEXTS).forEach(sender::send);
 
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
@@ -99,28 +104,34 @@ public class EndToEndIntegrationTests {
         waitFor(() -> {
             assertThat(messages, hasSize(4));
             assertThat(otherReceivedMessages, hasSize(4));
-            assertThat(extractPayload(messages), containsInAnyOrder("Joseph", "Jack", "123", "hi world"));
-            assertThat(extractPayload(otherReceivedMessages), containsInAnyOrder("Joseph", "Jack", "123", "hi world"));
+            assertThat(extractPayload(messages), containsInAnyOrder(MESSAGE_TEXTS));
+            assertThat(extractPayload(otherReceivedMessages),
+                    containsInAnyOrder(MESSAGE_TEXTS));
         });
     }
 
     @Test
     public void scs_whenMultipleMembersOfSameConsumerGroup_groupOnlySeesEachMessageOnce() throws Exception {
+        int messageCount = 40;
+
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
         Receiver receiver2 = createReceiver(randomGroupArg1);
 
-        IntStream.range(0, 1000).mapToObj(String::valueOf).forEach(sender::send);
+        CountDownLatch latch = new CountDownLatch(messageCount);
+        receiver.setLatch(latch);
+        receiver2.setLatch(latch);
+
+        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+
+        boolean completed = latch.await(20, TimeUnit.SECONDS);
+        assertThat("timed out waiting for all messages to arrive", completed, is(true));
 
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> assertThat(otherReceivedMessages.size() + messages.size(), is(1000)));
-
-        waitFor(() -> {
-            assertThat(otherReceivedMessages, iterableWithSize(lessThan(1000)));
-            assertThat(messages, iterableWithSize(lessThan(1000)));
-        });
+        assertThat(otherReceivedMessages, iterableWithSize(lessThan(messageCount)));
+        assertThat(messages, iterableWithSize(lessThan(messageCount)));
     }
 
     @Test
@@ -128,75 +139,80 @@ public class EndToEndIntegrationTests {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
 
-        sender.send("Joseph", ImmutableMap.of("holy", "header"));
+        sender.send(MESSAGE_TEXTS[1], ImmutableMap.of(HEADER_KEY, HEADER_VALUE));
 
         List<Message> messages = receiver.getHandledMessages();
 
         waitFor(() -> assertThat(messages, contains(
                 allOf(
-                        hasProperty("payload", is("Joseph")),
-                        hasProperty("headers", hasEntry("holy", "header"))
+                        hasProperty("payload", is(MESSAGE_TEXTS[1])),
+                        hasProperty("headers", hasEntry(HEADER_KEY, HEADER_VALUE))
                 )
         )));
-
     }
 
     @Test
     public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
         Sender sender = createSender();
-        createReceiver(randomGroupArg1);
+        createReceiver(randomGroupArg1, MAX_ATTEMPTS_2);
 
         new SolaceQueueProvisioner(SolaceTestUtils.getSolaceProperties()).provisionDeadLetterQueue();
 
-        sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
+        sender.send(Receiver.EXCEPTION_REQUEST);
 
         BytesXMLMessage bytesXMLMessage = waitForDeadLetter(10000);
         assertThat(bytesXMLMessage, notNullValue());
 
-        String stacktrace = (String) bytesXMLMessage.getProperties().get(RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE);
-        assertThat(stacktrace, containsString("Your wish is my command"));
+        String stacktrace = (String) bytesXMLMessage.getProperties().get(
+                RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE);
+        assertThat(stacktrace, containsString(Receiver.REQUESTED_EXCEPTION));
     }
 
     @Test
     public void scs_whenConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
         Sender sender = createSender();
-        Receiver receiver = createReceiver(randomGroupArg1);
+        Receiver receiver = createReceiver(randomGroupArg1,
+                RETRY_BACKOFF_1X,
+                RETRY_BACKOFF_50MS);
 
-        sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
+        sender.send(Receiver.EXCEPTION_REQUEST);
 
         List<Message> receivedMessages = receiver.getReceivedMessages();
         List<Message> handledMessages = receiver.getHandledMessages();
 
-        waitFor(10000, () -> {
+        waitFor(1000, () -> {
             assertThat(receivedMessages, hasSize(3));
             assertThat(handledMessages, empty());
-            assertThat(extractPayload(receivedMessages), Matchers.contains(Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION));
+            assertThat(extractPayload(receivedMessages),
+                    contains(Receiver.EXCEPTION_REQUEST,
+                            Receiver.EXCEPTION_REQUEST,
+                            Receiver.EXCEPTION_REQUEST));
         });
 
         BytesXMLMessage bytesXMLMessage = waitForDeadLetter();
         assertThat(bytesXMLMessage, notNullValue());
-
     }
 
     @Test
-    public void scs_whenRetryIsDisabled_doesNotRetry() throws Exception {
+    public void scs_maxAttempts1_preventsBinderRetry() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
-        sender.send("José");
+        sender.send(Receiver.EXCEPTION_REQUEST);
 
-        List<Message> messages = receiver.getHandledMessages();
+        Thread.sleep(5000);
+        assertThat(receiver.getHandledMessages(), hasSize(0));
 
-        waitFor(() -> {
-            assertThat(messages, hasSize(1));
-            assertThat(extractPayload(messages), containsInAnyOrder("José"));
-        });
+        //we always get the retry from the solace broker
+        assertThat(receiver.getReceivedMessages(), hasSize(2));
+        assertThat(extractStringPayload(receiver.getReceivedMessages()),
+                contains(Receiver.EXCEPTION_REQUEST, Receiver.EXCEPTION_REQUEST));
     }
 
     @Test
     public void scs_whenAPartitioningKeyIsConfigured_messagesAreRoutedToTheRelevantPartition() throws Exception {
         Sender sender = createSender(
-                String.format("--spring.cloud.stream.bindings.output.producer.partitionKeyExpression=%s", "payload.equals('foo')?0:1"),
+                String.format("--spring.cloud.stream.bindings.output.producer.partitionKeyExpression=%s", "T(Integer).parseInt(payload) % 13 == 0 ? 1 : 0"),
                 String.format("--spring.cloud.stream.bindings.output.producer.partitionCount=%s", 2)
         );
 
@@ -213,29 +229,27 @@ public class EndToEndIntegrationTests {
                 String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
         );
 
-        sender.send("foo");
-        sender.send("bar");
-        sender.send("baz");
-        sender.send("foo");
-        IntStream.range(0, 1000).mapToObj(String::valueOf).forEach(sender::send);
+        int messageCount = 39;
+        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
 
         List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
         List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
 
         waitFor(() -> {
-            assertThat(messagesPartition1, hasSize(1002));
-            List<String> objects = (List<String>) extractPayload(messagesPartition1);
-            assertThat(objects, hasItems("bar", "baz"));
+            assertThat(messagesPartition1, hasSize(3));
+            List<String> objects = extractStringPayload(messagesPartition1);
+            assertThat(objects, hasItems("0", "13", "26"));
 
-            assertThat(messagesPartition0, hasSize(2));
-            assertThat(extractPayload(messagesPartition0), containsInAnyOrder("foo", "foo"));
+            assertThat(messagesPartition0, hasSize(36));
+            assertThat(extractStringPayload(messagesPartition0),
+                    allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
         });
     }
 
     @Test
     public void scs_supportsSerializable() throws Exception {
         Sender sender = createSender();
-        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
+        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_2);
 
         SerializableTest serializableTest = new SerializableTest("some value");
         sender.send(serializableTest);
@@ -291,7 +305,11 @@ public class EndToEndIntegrationTests {
         )).toArray(String[]::new);
     }
 
-    List<? extends Object> extractPayload(Iterable<Message> messages) {
+    private List<String> extractStringPayload(Iterable<Message> messages) {
+        return extractPayload(messages).stream().map(Object::toString).collect(Collectors.toList());
+    }
+
+    private List<?> extractPayload(Iterable<Message> messages) {
         return StreamSupport.stream(messages.spliterator(), false).map(Message::getPayload).collect(Collectors.toList());
     }
 

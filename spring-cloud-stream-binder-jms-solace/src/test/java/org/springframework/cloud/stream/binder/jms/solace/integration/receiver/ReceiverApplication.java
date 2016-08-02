@@ -18,6 +18,7 @@ package org.springframework.cloud.stream.binder.jms.solace.integration.receiver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -41,21 +42,31 @@ public class ReceiverApplication {
     @Component
     public static class Receiver {
 
-        public static final String PLEASE_THROW_AN_EXCEPTION = "Please throw an exception";
+        public static final String EXCEPTION_REQUEST = "Please throw an exception";
+        public static final String REQUESTED_EXCEPTION = "Here you go";
+
         private final List<Message> handledMessages = new ArrayList<>();
 
         private final List<Message> receivedMessages = new ArrayList<>();
+        private CountDownLatch latch;
 
         @StreamListener(Sink.INPUT)
         public void receive(Message message) {
             receivedMessages.add(message);
 
             Object payload = message.getPayload();
-            if (payload.equals(PLEASE_THROW_AN_EXCEPTION)) {
-                throw new RuntimeException("Your wish is my command");
+            if (payload.equals(EXCEPTION_REQUEST)) {
+                throw new RuntimeException(REQUESTED_EXCEPTION);
             }
 
             handledMessages.add(message);
+            if (latch != null) {
+                latch.countDown();
+            }
+        }
+
+        public void setLatch(CountDownLatch latch) {
+            this.latch = latch;
         }
 
         public List<Message> getHandledMessages() {
