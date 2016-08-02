@@ -94,7 +94,7 @@ public class SolaceQueueProvisionerIntegrationTests {
 
         CountingListener countingListener = listenToQueue(consumerGroupName);
 
-        Thread.sleep(2000); // We assume 2 seconds as a sensible time to be confident no messages will be received.
+        Thread.sleep(500); // We assume 500 milliseconds as a sensible time to be confident no messages will be received.
         assertThat(countingListener.getErrors(), empty());
         assertThat(countingListener.getPayloads(), empty());
     }
@@ -123,8 +123,7 @@ public class SolaceQueueProvisionerIntegrationTests {
 
     @Test
     public void provision_whenMultipleListenersOnOneQueue_listenersCompeteForMessages() throws Exception {
-        int numberOfMessages = 1000;
-
+        int numberOfMessages = 200;
         String consumerGroupName = getRandomName("consumerGroup");
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
@@ -209,7 +208,7 @@ public class SolaceQueueProvisionerIntegrationTests {
         messageProducer.send(createMessage(TEXT_CONTENT), topic);
         RollbackListener rollbackListener = listenAndRollback(consumerGroupName,
                 transactedSession);
-        CountingListener countingListener = listenToQueue(DLQ_NAME, 1000);
+        CountingListener countingListener = listenToQueue(DLQ_NAME);
 
         countingListener.awaitExpectedMessages();
         assertThat(rollbackListener.getReceivedMessageCount(), is(maxRetries + 1));
@@ -228,7 +227,6 @@ public class SolaceQueueProvisionerIntegrationTests {
         assertThat(countingListener.getPayloads().size(), is(1));
         assertThat(countingListener.getPayloads().get(0), is(TEXT_CONTENT));
         assertThat(deadLetterQueue, is(DLQ_NAME));
-
     }
 
     private CountingListener listenToQueue(String queueName) throws JCSMPException {

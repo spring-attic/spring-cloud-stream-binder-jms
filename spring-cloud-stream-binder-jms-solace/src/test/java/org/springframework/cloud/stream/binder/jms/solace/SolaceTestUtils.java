@@ -169,18 +169,6 @@ public class SolaceTestUtils {
             }
 
             messages.add(bytesXMLMessage);
-
-            long count = latch.getCount();
-
-            if (count % 1000 == 0) {
-                System.out.println(String.format("Message %s", count));
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
             latch.countDown();
         }
 
