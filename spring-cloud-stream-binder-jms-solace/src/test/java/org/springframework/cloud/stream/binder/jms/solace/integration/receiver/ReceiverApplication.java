@@ -47,10 +47,11 @@ public class ReceiverApplication {
         private final List<Message> receivedMessages = new ArrayList<>();
 
         @StreamListener(Sink.INPUT)
-        public void greet(Message message) {
+        public void receive(Message message) {
             receivedMessages.add(message);
 
-            if (message.getPayload().equals(PLEASE_THROW_AN_EXCEPTION)) {
+            Object payload = message.getPayload();
+            if (payload.equals(PLEASE_THROW_AN_EXCEPTION)) {
                 throw new RuntimeException("Your wish is my command");
             }
 

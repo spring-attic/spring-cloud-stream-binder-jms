@@ -52,6 +52,10 @@ public class SolaceTestUtils {
     }
 
     public static BytesXMLMessage waitForDeadLetter() {
+        return waitForDeadLetter(2000);
+    }
+
+    public static BytesXMLMessage waitForDeadLetter(int timeout) {
 
         ConsumerFlowProperties consumerFlowProperties = new ConsumerFlowProperties();
         consumerFlowProperties.setEndpoint(DLQ);
@@ -59,16 +63,16 @@ public class SolaceTestUtils {
         CountDownLatch latch = new CountDownLatch(1);
         CountingListener countingListener = new CountingListener(latch);
 
-        waitForItToWork(5000, () -> {
-            try {
-                FlowReceiver consumer = createSession().createFlow(countingListener, consumerFlowProperties);
-                consumer.start();
-                countingListener.awaitExpectedMessages();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return countingListener.getMessages().get(0);
+        try {
+            FlowReceiver consumer = createSession().createFlow(countingListener, consumerFlowProperties);
+            consumer.start();
+
+            boolean success = countingListener.awaitExpectedMessages(timeout);
+            return success ? countingListener.getMessages().get(0) : null;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void waitFor(Runnable assertion) {
@@ -137,7 +141,13 @@ public class SolaceTestUtils {
 
         @Override
         public void onReceive(BytesXMLMessage bytesXMLMessage) {
-            payloads.add(new String(((XMLContentMessageImpl) bytesXMLMessage).getXMLContent()));
+            if (bytesXMLMessage instanceof XMLContentMessageImpl) {
+                payloads.add(((XMLContentMessageImpl)bytesXMLMessage).getXMLContent());
+            }
+            else {
+                payloads.add(bytesXMLMessage.toString());
+            }
+
             messages.add(bytesXMLMessage);
 
             long count = latch.getCount();
@@ -159,8 +169,12 @@ public class SolaceTestUtils {
             errors.add(e);
         }
 
-        void awaitExpectedMessages() throws InterruptedException {
-            latch.await(2, TimeUnit.SECONDS);
+        boolean awaitExpectedMessages() throws InterruptedException {
+            return awaitExpectedMessages(2000);
+        }
+
+        boolean awaitExpectedMessages(int timeout) throws InterruptedException {
+            return latch.await(timeout, TimeUnit.MILLISECONDS);
         }
 
         List<JCSMPException> getErrors() {

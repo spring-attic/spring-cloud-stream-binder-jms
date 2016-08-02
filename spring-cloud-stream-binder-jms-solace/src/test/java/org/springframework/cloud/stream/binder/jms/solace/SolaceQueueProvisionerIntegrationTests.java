@@ -213,7 +213,7 @@ public class SolaceQueueProvisionerIntegrationTests {
 
     @Test
     public void provisionDLQ_createsANativeSolaceDLQ() throws Exception {
-        String DEATH_LETTER = "I got a letter this morning";
+        String DEATH_LETTER = "I got a letter this morning, what do you reckon it read";
 
         String deadLetterQueue = solaceQueueProvisioner.provisionDeadLetterQueue();
 

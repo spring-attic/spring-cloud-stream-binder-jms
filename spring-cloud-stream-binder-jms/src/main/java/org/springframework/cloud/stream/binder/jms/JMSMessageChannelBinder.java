@@ -39,6 +39,7 @@ import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.support.converter.SimpleMessageConverter;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.retry.support.RetryTemplate;
@@ -255,41 +256,49 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                     }
                 }
             };
-            listener.setRequestChannel(moduleInputChannel);
+
+            listener.setMessageConverter(new SimpleMessageConverter() {
+                @Override
+                protected byte[] extractByteArrayFromMessage(BytesMessage message) throws JMSException {
+                    message.reset();
+                    return super.extractByteArrayFromMessage(message);
+                }
+            });
+
             //TODO: look into the difference between endpoint and adapter (SI research)
             JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(
                     listenerContainer,
                     listener);
             endpoint.setBeanName("inbound." + name);
 
-            DirectChannel bridgeToModuleChannel = getBridgeToModuleChannel(name);
-            createAndConnectConvertingBridge(name,
-                    moduleInputChannel,
-                    bridgeToModuleChannel);
+            SubscribableChannel deserializingChannel = getDeserializingChannel(name,
+                    moduleInputChannel);
+
+            listener.setRequestChannel(deserializingChannel);
 
             DefaultBinding<MessageChannel> binding = new DefaultBinding<>(name,
                     group,
-                    bridgeToModuleChannel,
+                    deserializingChannel,
                     endpoint);
+
             endpoint.start();
+
             return binding;
         }
 
-        private void createAndConnectConvertingBridge(String name,
-                                                      MessageChannel moduleInputChannel,
-                                                      DirectChannel bridgeToModuleChannel) {
-            ReceivingHandler convertingBridge = new ReceivingHandler();
-            convertingBridge.setOutputChannel(moduleInputChannel);
-            convertingBridge.setBeanName(name + ".convert.bridge");
-            convertingBridge.afterPropertiesSet();
-            bridgeToModuleChannel.subscribe(convertingBridge);
-        }
+        private SubscribableChannel getDeserializingChannel(String name,
+                                                            MessageChannel moduleInputChannel) {
+            DeserializingReceivingHandler deserializingReceivingHandler = new DeserializingReceivingHandler();
+            deserializingReceivingHandler.setOutputChannel(moduleInputChannel);
+            deserializingReceivingHandler.setBeanName(name + ".convert.bridge");
+            deserializingReceivingHandler.afterPropertiesSet();
 
-        private DirectChannel getBridgeToModuleChannel(String name) {
-            DirectChannel bridgeToModuleChannel = new DirectChannel();
-            bridgeToModuleChannel.setBeanFactory(getBeanFactory());
-            bridgeToModuleChannel.setBeanName(name + ".bridge");
-            return bridgeToModuleChannel;
+            DirectChannel deserializingChannel = new DirectChannel();
+            deserializingChannel.setBeanFactory(getBeanFactory());
+            deserializingChannel.setBeanName(name + ".bridge");
+            deserializingChannel.subscribe(deserializingReceivingHandler);
+
+            return deserializingChannel;
         }
     }
 
@@ -356,7 +365,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                 messageValues.put(partitionHeaderName,
                         this.partitionHandler.determinePartition(message));
             }
-            messageValues.setPayload(message.getPayload());
+
             super.handleMessageInternal(messageValues.toMessage(
                     getMessageBuilderFactory()));
         }
@@ -392,9 +401,9 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
     /**
      * Receiving handler to deserialize message payload as needed.
      */
-    private final class ReceivingHandler extends AbstractReplyProducingMessageHandler {
+    private final class DeserializingReceivingHandler extends AbstractReplyProducingMessageHandler {
 
-        private ReceivingHandler() {
+        private DeserializingReceivingHandler() {
             super();
             this.setBeanFactory(JMSMessageChannelBinder.this.getBeanFactory());
         }

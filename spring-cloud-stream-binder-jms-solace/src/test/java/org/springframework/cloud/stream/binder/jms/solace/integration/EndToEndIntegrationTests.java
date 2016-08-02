@@ -35,7 +35,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
@@ -143,9 +145,11 @@ public class EndToEndIntegrationTests {
         Sender sender = createSender();
         createReceiver(randomGroupArg1);
 
+        new SolaceQueueProvisioner(new SolaceConfigurationProperties()).provisionDeadLetterQueue();
+
         sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
 
-        BytesXMLMessage bytesXMLMessage = waitForDeadLetter();
+        BytesXMLMessage bytesXMLMessage = waitForDeadLetter(10000);
         assertThat(bytesXMLMessage, notNullValue());
 
         String stacktrace = (String) bytesXMLMessage.getProperties().get(RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE);
@@ -162,7 +166,7 @@ public class EndToEndIntegrationTests {
         List<Message> receivedMessages = receiver.getReceivedMessages();
         List<Message> handledMessages = receiver.getHandledMessages();
 
-        waitFor(5000, () -> {
+        waitFor(10000, () -> {
             assertThat(receivedMessages, hasSize(3));
             assertThat(handledMessages, empty());
             assertThat(extractPayload(receivedMessages), Matchers.contains(Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION, Receiver.PLEASE_THROW_AN_EXCEPTION));
@@ -230,7 +234,7 @@ public class EndToEndIntegrationTests {
     @Test
     public void scs_supportsSerializable() throws Exception {
         Sender sender = createSender();
-        Receiver receiver = createReceiver(randomGroupArg1);
+        Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
         SerializableTest serializableTest = new SerializableTest("some value");
         sender.send(serializableTest);
@@ -244,23 +248,7 @@ public class EndToEndIntegrationTests {
     }
 
     @Test
-    public void scs_supportsList() throws Exception {
-        Sender sender = createSender();
-        Receiver receiver = createReceiver(randomGroupArg1);
-
-        List<String> stringList = Arrays.asList("hello", "world");
-        sender.send(stringList);
-
-        List<Message> messages = receiver.getHandledMessages();
-
-        waitFor(() -> {
-            assertThat(messages, hasSize(1));
-            assertThat(extractPayload(messages), containsInAnyOrder(stringList));
-        });
-    }
-
-    @Test
-    public void scs_supportsInt() throws Exception {
+    public void scs_supportsPrimitive() throws Exception {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
 
