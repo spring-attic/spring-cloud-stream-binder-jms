@@ -34,6 +34,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.springframework.boot.Banner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
@@ -263,21 +264,31 @@ public class EndToEndIntegrationTests {
     }
 
     private Sender createSender(String... arguments) {
-        String destinationArg = String.format(OUTPUT_DESTINATION_FORMAT, this.destination);
-        arguments = Stream.concat(Arrays.stream(arguments), Stream.of(destinationArg)).toArray(String[]::new);
+        ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class)
+                .bannerMode(Banner.Mode.OFF)
+                .build()
+                .run(applicationArguments(String.format(OUTPUT_DESTINATION_FORMAT, this.destination), arguments));
 
-        ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class).build().run(arguments);
         startedContexts.add(context);
         return context.getBean(Sender.class);
     }
 
     private Receiver createReceiver(String... arguments) {
-        String destinationArg = String.format(INPUT_DESTINATION_FORMAT, this.destination);
-        arguments = Stream.concat(Arrays.stream(arguments), Stream.of(destinationArg)).toArray(String[]::new);
+        ConfigurableApplicationContext context = new SpringApplicationBuilder(ReceiverApplication.class)
+                .bannerMode(Banner.Mode.OFF)
+                .build()
+                .run(applicationArguments(String.format(INPUT_DESTINATION_FORMAT, this.destination), arguments));
 
-        ConfigurableApplicationContext context = new SpringApplicationBuilder(ReceiverApplication.class).build().run(arguments);
         startedContexts.add(context);
         return context.getBean(Receiver.class);
+    }
+
+    private String[] applicationArguments(String destinationArg, String[] arguments) {
+        return Stream.concat(Arrays.stream(arguments), Stream.of(
+                destinationArg,
+                "--logging.level.org.springframework=WARN",
+                "--logging.level.org.springframework.boot=WARN"
+        )).toArray(String[]::new);
     }
 
     List<? extends Object> extractPayload(Iterable<Message> messages) {

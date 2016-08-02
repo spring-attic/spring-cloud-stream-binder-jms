@@ -11,11 +11,4 @@ spring:
     username: admin
     password: admin
 
-
-logging:
-  level:
-    org.springframework: debug
-    com.solacesystems.jms: error
-    com.solacesystems.jcsmp: error
 debug: false
-    # broker-url: 'tcp://localhost:61616' this is the default for non-in-memory
