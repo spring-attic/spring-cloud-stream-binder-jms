@@ -18,6 +18,7 @@ package org.springframework.cloud.stream.binder.jms.solace;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -25,24 +26,42 @@ import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
 import com.solacesystems.jcsmp.transaction.TransactedSession;
 
+import org.springframework.beans.factory.config.YamlMapFactoryBean;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.core.io.ClassPathResource;
+
 import static com.solacesystems.jcsmp.JCSMPSession.FLAG_IGNORE_DOES_NOT_EXIST;
 import static com.solacesystems.jcsmp.JCSMPSession.WAIT_FOR_CONFIRM;
 
 public class SolaceTestUtils {
 
+    public static final String APPLICATION_YML = "application.yml";
+
     public static final String DLQ_NAME = "#DEAD_MSG_QUEUE";
     public static final Queue DLQ = JCSMPFactory.onlyInstance().createQueue(DLQ_NAME);
 
-    public static JCSMPSession createSession() {
-        //TODO: Use Spring properties instead
-        JCSMPProperties properties = new JCSMPProperties();
-        properties.setProperty("username", "admin");
-        properties.setProperty("password", "admin");
-        properties.setProperty("host", "192.168.99.101");
+    @SuppressWarnings("unchecked")
+    public static SolaceConfigurationProperties getSolaceProperties() throws Exception {
+        YamlMapFactoryBean factoryBean = new YamlMapFactoryBean();
+        factoryBean.setResources(new ClassPathResource(APPLICATION_YML));
 
+        Map<String, Object> mapObject = factoryBean.getObject();
+        Map<String, Object> spring = (Map<String, Object>) mapObject.get("spring");
+        Map<String, String> solacePropertyMap = (Map<String, String>) spring.get("solace");
+
+        SolaceConfigurationProperties solaceConfigurationProperties = new SolaceConfigurationProperties();
+        solaceConfigurationProperties.setMaxRedeliveryAttempts(null);
+        solaceConfigurationProperties.setUsername(solacePropertyMap.get("username"));
+        solaceConfigurationProperties.setPassword(solacePropertyMap.get("password"));
+        solaceConfigurationProperties.setHost(solacePropertyMap.get("host"));
+
+        return solaceConfigurationProperties;
+    }
+
+    public static JCSMPSession createSession() {
         try {
-            return JCSMPFactory.onlyInstance().createSession(properties);
-        } catch (InvalidPropertiesException e) {
+            return new SolaceQueueProvisioner.SessionFactory(getSolaceProperties()).build();
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

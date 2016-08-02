@@ -32,12 +32,14 @@ import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigura
  * @since 1.1
  */
 public class SolaceQueueProvisioner implements QueueProvisioner {
-    private static String DMQ_NAME = "#DEAD_MSG_QUEUE";
+    private static final String DMQ_NAME = "#DEAD_MSG_QUEUE";
+    private final SessionFactory sessionFactory;
 
     private SolaceConfigurationProperties solaceConfigurationProperties;
 
     public SolaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) {
         this.solaceConfigurationProperties = solaceConfigurationProperties;
+        this.sessionFactory = new SessionFactory(solaceConfigurationProperties);
     }
 
     @Override
@@ -45,9 +47,8 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         if (ArrayUtils.isEmpty(groups)) return;
 
         try {
-
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
-            JCSMPSession session = new SessionFactory().build();
+            JCSMPSession session = sessionFactory.build();
 
             // Using Durable... because non-durable Solace TopicEndpoints don't have names
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
@@ -68,15 +69,14 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
 
     @Override
     public String provisionDeadLetterQueue() {
-        JCSMPSession session = null;
-        Queue deadMsgQ;
+        EndpointProperties properties = new EndpointProperties();
+        properties.setPermission(EndpointProperties.PERMISSION_DELETE);
+        properties.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
+
+        Queue deadMsgQueue = JCSMPFactory.onlyInstance().createQueue(DMQ_NAME);
+
         try {
-            session = new SessionFactory().build();
-            EndpointProperties dmq_provision = new EndpointProperties();
-            dmq_provision.setPermission(EndpointProperties.PERMISSION_DELETE);
-            dmq_provision.setAccessType(EndpointProperties.ACCESSTYPE_EXCLUSIVE);
-            deadMsgQ = JCSMPFactory.onlyInstance().createQueue(DMQ_NAME);
-            session.provision(deadMsgQ, dmq_provision, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
+            sessionFactory.build().provision(deadMsgQueue, properties, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
         } catch (JCSMPException e) {
             throw new RuntimeException(e);
         }
@@ -104,13 +104,18 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         }
     }
 
-    private class SessionFactory {
-        //TODO: Use spring properties instead
+    protected static class SessionFactory {
+        private SolaceConfigurationProperties properties;
+
+        public SessionFactory(SolaceConfigurationProperties properties) {
+            this.properties = properties;
+        }
+
         public JCSMPSession build() throws InvalidPropertiesException {
             JCSMPProperties sessionProperties = new JCSMPProperties();
-            sessionProperties.setProperty("host", "192.168.99.101");
-            sessionProperties.setProperty("username", "admin");
-            sessionProperties.setProperty("password", "admin");
+            sessionProperties.setProperty("host", properties.getHost());
+            sessionProperties.setProperty("username", properties.getUsername());
+            sessionProperties.setProperty("password", properties.getPassword());
 
             return JCSMPFactory.onlyInstance().createSession(sessionProperties);
         }

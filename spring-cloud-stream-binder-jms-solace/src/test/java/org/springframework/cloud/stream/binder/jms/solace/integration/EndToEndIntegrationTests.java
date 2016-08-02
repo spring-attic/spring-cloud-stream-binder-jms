@@ -38,6 +38,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.jms.solace.integration.receiver.ReceiverApplication.Receiver;
 import org.springframework.cloud.stream.binder.jms.solace.integration.sender.SenderApplication;
@@ -64,7 +65,6 @@ public class EndToEndIntegrationTests {
     private String destination;
     private String randomGroupArg1;
     private String randomGroupArg2;
-    private JmsTemplate jmsTemplate;
 
     @Before
     public void configureGroupsAndDestinations() throws JCSMPException {
@@ -145,7 +145,7 @@ public class EndToEndIntegrationTests {
         Sender sender = createSender();
         createReceiver(randomGroupArg1);
 
-        new SolaceQueueProvisioner(new SolaceConfigurationProperties()).provisionDeadLetterQueue();
+        new SolaceQueueProvisioner(SolaceTestUtils.getSolaceProperties()).provisionDeadLetterQueue();
 
         sender.send(Receiver.PLEASE_THROW_AN_EXCEPTION);
 
@@ -268,7 +268,6 @@ public class EndToEndIntegrationTests {
 
         ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class).build().run(arguments);
         startedContexts.add(context);
-        jmsTemplate = context.getBean(JmsTemplate.class);
         return context.getBean(Sender.class);
     }
 

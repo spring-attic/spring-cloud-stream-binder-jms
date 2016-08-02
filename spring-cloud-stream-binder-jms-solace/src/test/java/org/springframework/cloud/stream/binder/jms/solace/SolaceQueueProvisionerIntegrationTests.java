@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.solace;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
@@ -27,9 +28,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.springframework.beans.factory.config.YamlMapFactoryBean;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.bind.YamlConfigurationFactory;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.CountingListener;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.FailingListener;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.core.io.ClassPathResource;
 
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
@@ -41,11 +47,12 @@ public class SolaceQueueProvisionerIntegrationTests {
     private JCSMPSession session;
     private XMLMessageProducer messageProducer;
     private Topic topic;
-    private SolaceConfigurationProperties solaceConfigurationProperties = new SolaceConfigurationProperties();
+    private SolaceConfigurationProperties solaceConfigurationProperties;
 
     @Before
     public void setUp() throws Exception {
-        solaceConfigurationProperties.setMaxRedeliveryAttempts(null);
+        solaceConfigurationProperties = SolaceTestUtils.getSolaceProperties();
+
         this.solaceQueueProvisioner = new SolaceQueueProvisioner(solaceConfigurationProperties);
         this.session = SolaceTestUtils.createSession();
         this.messageProducer = session.getMessageProducer(new MessageProducerVoidEventHandler());
