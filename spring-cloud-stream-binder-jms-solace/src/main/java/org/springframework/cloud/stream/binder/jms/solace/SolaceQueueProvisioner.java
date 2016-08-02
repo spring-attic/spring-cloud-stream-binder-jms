@@ -49,7 +49,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
             JCSMPSession session = new SessionFactory().build();
 
-            //TODO: we don't need the topic to be durable
+            // Using Durable... because non-durable Solace TopicEndpoints don't have names
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
             session.provision(topicEndpoint, null, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
 
