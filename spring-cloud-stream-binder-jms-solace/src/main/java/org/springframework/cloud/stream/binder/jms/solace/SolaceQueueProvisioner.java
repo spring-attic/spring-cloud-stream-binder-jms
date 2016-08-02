@@ -94,7 +94,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
 
             Integer maxRedeliveryAttempts = solaceConfigurationProperties.getMaxRedeliveryAttempts();
             if (maxRedeliveryAttempts != null && maxRedeliveryAttempts >= 0) {
-                endpointProperties.setMaxMsgRedelivery(1);
+                endpointProperties.setMaxMsgRedelivery(maxRedeliveryAttempts);
             }
 
             endpointProperties.setQuota(100);

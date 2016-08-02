@@ -195,7 +195,7 @@ public class SolaceQueueProvisionerIntegrationTests {
 
     @Test
     public void provision_whenMaxRedeliveryAttemptsNonzero_shouldRetryAndThenSendToDLQ() throws Exception {
-        int maxRetries = 1;
+        int maxRetries = 4;
         solaceConfigurationProperties.setMaxRedeliveryAttempts(maxRetries);
 
         SolaceQueueProvisioner reconfiguredProvisioner = new SolaceQueueProvisioner(
