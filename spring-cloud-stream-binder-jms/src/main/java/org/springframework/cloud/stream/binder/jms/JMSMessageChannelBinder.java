@@ -339,6 +339,9 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                     partitionHandler,
                     PARTITION_HEADER);
             handler.setDestinationName(name);
+            handler.setBeanFactory(getBeanFactory());
+            handler.afterPropertiesSet();
+
             return handler;
         }
     }
