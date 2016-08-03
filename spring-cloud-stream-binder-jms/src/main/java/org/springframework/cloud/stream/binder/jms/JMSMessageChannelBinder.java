@@ -234,6 +234,9 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                                                     MessageChannel moduleInputChannel,
                                                     AbstractMessageListenerContainer listenerContainer,
                                                     RetryTemplate retryTemplate) {
+
+            // the listener is the channel adapter. it connects the JMS endpoint to the input
+            // channel by converting the messages that the listener container passes to it
             ChannelPublishingJmsMessageListener listener = new ChannelPublishingJmsMessageListener() {
                 @Override
                 public void onMessage(Message jmsMessage,
@@ -276,7 +279,7 @@ public class JMSMessageChannelBinder extends AbstractBinder<MessageChannel, Cons
                 }
             });
 
-            //TODO: look into the difference between endpoint and adapter (SI research)
+            //The endpoint allows Spring Integration to control the lifecycle of the listener
             JmsMessageDrivenEndpoint endpoint = new JmsMessageDrivenEndpoint(
                     listenerContainer,
                     listener);
