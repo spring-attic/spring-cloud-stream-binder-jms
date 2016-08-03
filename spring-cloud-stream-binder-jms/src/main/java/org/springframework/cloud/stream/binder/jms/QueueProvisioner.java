@@ -20,6 +20,7 @@ package org.springframework.cloud.stream.binder.jms;
  * SPI defining vendor-specific provisioning methods to grant compatibility
  * with the JMS binder.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

@@ -50,6 +50,7 @@ import org.springframework.stereotype.Component;
 /**
  * Binder definition for JMS.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

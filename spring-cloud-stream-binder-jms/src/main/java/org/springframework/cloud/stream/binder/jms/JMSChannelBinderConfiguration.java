@@ -31,6 +31,7 @@ import org.springframework.jms.core.JmsTemplate;
  * Configuration class containing required beans in order to set up the JMS
  * binder.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

@@ -24,6 +24,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Configuration properties for Solace specific features.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

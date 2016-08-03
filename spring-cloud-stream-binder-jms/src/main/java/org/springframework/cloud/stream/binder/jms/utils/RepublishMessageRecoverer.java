@@ -39,6 +39,7 @@ import org.springframework.messaging.MessageHeaders;
  * <p>It allows further customization through
  * {@link RepublishMessageRecoverer#additionalHeaders(Message, Throwable)}.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

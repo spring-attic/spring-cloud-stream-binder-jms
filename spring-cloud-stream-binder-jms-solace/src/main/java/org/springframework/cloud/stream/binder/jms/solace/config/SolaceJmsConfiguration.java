@@ -39,6 +39,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * Creates the connection factory and the infrastructure provisioner.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

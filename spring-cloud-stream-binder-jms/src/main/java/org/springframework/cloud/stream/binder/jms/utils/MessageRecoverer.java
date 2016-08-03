@@ -22,6 +22,7 @@ import javax.jms.Message;
  * Interface used to define the recovery strategy once the maximum number
  * of delivery attempts has been reached.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero

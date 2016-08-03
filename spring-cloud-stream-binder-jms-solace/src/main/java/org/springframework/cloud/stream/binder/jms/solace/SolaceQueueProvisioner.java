@@ -26,6 +26,7 @@ import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigura
 /**
  * {@link QueueProvisioner} for Solace.
  *
+ * @author Jack Galilee
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero
