@@ -14,7 +14,8 @@ The current version was built against solace API v7.1.2
 ### Running tests
 
 In order to run tests a Solace instance is required. There are virtual images available for download 
-as well as images for various cloud providers at http://dev.solacesystems.com/downloads/. Once this has been
-set up you may need to update `src/main/test/resources/application.yml` with the correct hostname and credentials.
-We found the VirtualBox image fairly easy to set up, it seems to work best with 'Host Only Networking' which is 
-fine for local development/testing.
+as well as images for various cloud providers at http://dev.solacesystems.com/downloads/.
+
+We found the VirtualBox image fairly easy to set up. We have provided `provision_solace.sh` to configure and boot
+this image; simply provide the path to the downloaded `.ova` file then update `src/main/test/resources/application.yml`
+with the IP address the script outputs.
