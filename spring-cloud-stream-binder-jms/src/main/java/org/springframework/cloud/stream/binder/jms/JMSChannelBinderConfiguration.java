@@ -17,7 +17,6 @@
 package org.springframework.cloud.stream.binder.jms;
 
 import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -41,16 +40,15 @@ import org.springframework.jms.core.JmsTemplate;
 public class JMSChannelBinderConfiguration {
 
     @Autowired
-    private Codec codec;
+    private ConnectionFactory connectionFactory;
 
     @Bean
-    JMSMessageChannelBinder jmsMessageChannelBinder(JmsTemplate template,
-                ConnectionFactory connectionFactory,
-                QueueProvisioner queueProvisioner) throws JMSException {
+    JMSMessageChannelBinder jmsMessageChannelBinder(QueueProvisioner queueProvisioner,
+                                                    Codec codec) throws Exception {
 
         JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(
                 connectionFactory,
-                template,
+                jmsTemplate(),
                 queueProvisioner
         );
         jmsMessageChannelBinder.setCodec(codec);
@@ -59,8 +57,14 @@ public class JMSChannelBinderConfiguration {
 
     @ConditionalOnMissingBean(MessageRecoverer.class)
     @Bean
-    MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
-        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate);
+    MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner) throws Exception {
+        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(JmsTemplate.class)
+    public JmsTemplate jmsTemplate() throws Exception {
+        return new JmsTemplate(connectionFactory);
     }
 
 }
