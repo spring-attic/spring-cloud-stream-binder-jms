@@ -30,7 +30,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author José Carlos Valero
  * @since 1.1
  */
-@ConfigurationProperties(prefix = "spring.solace")
+@ConfigurationProperties(prefix = "solace")
 public class SolaceConfigurationProperties {
 
     /** Host of solace server e.g. 192.168.99.100 */

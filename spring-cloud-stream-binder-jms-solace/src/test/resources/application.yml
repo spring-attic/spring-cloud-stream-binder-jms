@@ -6,9 +6,9 @@ spring:
   jmx:
     enabled: false
 
-  solace:
-    host: 192.168.99.101
-    username: admin
-    password: admin
+solace:
+  host: 192.168.61.100
+  username: admin
+  password: admin
 
 debug: false

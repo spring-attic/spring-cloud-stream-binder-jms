@@ -41,14 +41,18 @@ public class SolaceTestUtils {
     public static final String DLQ_NAME = "#DEAD_MSG_QUEUE";
     public static final Queue DLQ = JCSMPFactory.onlyInstance().createQueue(DLQ_NAME);
 
+    /**
+     * Gets solace properties within application.yml, without requiring a Spring App.
+     * @return
+     * @throws Exception
+     */
     @SuppressWarnings("unchecked")
     public static SolaceConfigurationProperties getSolaceProperties() throws Exception {
         YamlMapFactoryBean factoryBean = new YamlMapFactoryBean();
         factoryBean.setResources(new ClassPathResource(APPLICATION_YML));
 
         Map<String, Object> mapObject = factoryBean.getObject();
-        Map<String, Object> spring = (Map<String, Object>) mapObject.get("spring");
-        Map<String, String> solacePropertyMap = (Map<String, String>) spring.get("solace");
+        Map<String, String> solacePropertyMap = (Map<String, String>) mapObject.get("solace");
 
         SolaceConfigurationProperties solaceConfigurationProperties = new SolaceConfigurationProperties();
         solaceConfigurationProperties.setMaxRedeliveryAttempts(null);
