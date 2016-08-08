@@ -32,7 +32,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
 

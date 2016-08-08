@@ -30,6 +30,7 @@ import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.DefaultBinding;
 import org.springframework.cloud.stream.binder.PartitionKeyExtractorStrategy;
 import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.jms.JmsMessageDrivenEndpoint;

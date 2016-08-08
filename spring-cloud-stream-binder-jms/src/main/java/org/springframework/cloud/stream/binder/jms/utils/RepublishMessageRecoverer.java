@@ -25,7 +25,7 @@ import javax.jms.Message;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;

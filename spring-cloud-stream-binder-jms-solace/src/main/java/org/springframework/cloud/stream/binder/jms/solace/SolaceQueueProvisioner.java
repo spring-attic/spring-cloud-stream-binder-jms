@@ -20,7 +20,7 @@ import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.impl.DurableTopicEndpointImpl;
 import org.apache.commons.lang.ArrayUtils;
 
-import org.springframework.cloud.stream.binder.jms.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 
 /**

@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.jms;
+package org.springframework.cloud.stream.binder.jms.spi;
 
 /**
  * SPI defining vendor-specific provisioning methods to grant compatibility

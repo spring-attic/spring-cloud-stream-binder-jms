@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.binder.*;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;

@@ -21,6 +21,7 @@ import javax.jms.JMSException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.context.annotation.Bean;
