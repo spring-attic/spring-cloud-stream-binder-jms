@@ -33,6 +33,7 @@ import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * Solace specific configuration.
@@ -46,6 +47,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.1
  */
 @Configuration
+@Import(org.springframework.cloud.stream.binder.jms.JMSAutoConfiguration.class)
 @AutoConfigureBefore(JmsAutoConfiguration.class)
 @AutoConfigureAfter({JndiConnectionFactoryAutoConfiguration.class})
 @ConditionalOnClass({ConnectionFactory.class, SolConnectionFactoryImpl.class})

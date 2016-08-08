@@ -1,2 +1,0 @@
-jms:\
-org.springframework.cloud.stream.binder.jms.JMSAutoConfiguration
