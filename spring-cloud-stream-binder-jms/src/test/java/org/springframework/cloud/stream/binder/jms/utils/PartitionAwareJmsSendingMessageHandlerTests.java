@@ -14,13 +14,12 @@
  *  limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.jms;
+package org.springframework.cloud.stream.binder.jms.utils;
 
 import javax.jms.JMSException;
 
 import org.junit.Test;
 
-import org.springframework.cloud.stream.binder.PartitionHandler;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -35,10 +34,7 @@ import static org.springframework.test.util.ReflectionTestUtils.getField;
 
 public class PartitionAwareJmsSendingMessageHandlerTests {
 
-    private static final String PARTITION_HEADER = "partition";
-    PartitionHandler partitionHandler = mock(PartitionHandler.class);
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
-    JMSMessageChannelBinder parent = new JMSMessageChannelBinder(null, null, null);
     private ProducerProperties producerProperties = new ProducerProperties();
     private SpelExpressionParser parser = new SpelExpressionParser();
 
@@ -47,7 +43,7 @@ public class PartitionAwareJmsSendingMessageHandlerTests {
 
     @Test
     public void setDestinationName_whenDeterminePartitionIsNotNull_setsDestinationExpression() throws Exception {
-        JMSMessageChannelBinder.PartitionAwareJmsSendingMessageHandler target = parent.new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties, partitionHandler, PARTITION_HEADER);
+        PartitionAwareJmsSendingMessageHandler target = new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties);
         producerProperties.setPartitionKeyExpression(parser.parseExpression("whatever"));
         target.setDestinationName("name");
 
@@ -58,7 +54,7 @@ public class PartitionAwareJmsSendingMessageHandlerTests {
 
     @Test(expected = IllegalArgumentException.class)
     public void setDestinationName_whenIllegalCharactersAsDestinationName_throwsException() throws Exception {
-        JMSMessageChannelBinder.PartitionAwareJmsSendingMessageHandler target = parent.new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties, partitionHandler, PARTITION_HEADER);
+        PartitionAwareJmsSendingMessageHandler target = new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties);
         producerProperties.setPartitionKeyExpression(parser.parseExpression("whatever"));
 
         target.setDestinationName("na'me");
@@ -66,23 +62,16 @@ public class PartitionAwareJmsSendingMessageHandlerTests {
 
     @Test
     public void setDestinationName_whenNotPartitioned_setsRawDestinationName() throws Exception {
-        JMSMessageChannelBinder.PartitionAwareJmsSendingMessageHandler target = parent.new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties, partitionHandler, PARTITION_HEADER);
+        PartitionAwareJmsSendingMessageHandler target = new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties);
 
         target.setDestinationName("name");
 
         assertThat(ReflectionTestUtils.getField(target, "destinationName"), is("name"));
     }
 
-
-    @Test(expected = IllegalArgumentException.class)
-    public void partitionAwareEvaluatingMessageProcessor_whenIllegalCharactersAsHeaderName_throwsException() throws Exception {
-        parent.new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties, partitionHandler, "P'ARTITION_HEADER");
-    }
-
-
     @Test(expected = UnsupportedOperationException.class)
     public void setDestination_throwsException() throws Exception {
-        JMSMessageChannelBinder.PartitionAwareJmsSendingMessageHandler target = parent.new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties, partitionHandler, PARTITION_HEADER);
+        PartitionAwareJmsSendingMessageHandler target = new PartitionAwareJmsSendingMessageHandler(jmsTemplate, producerProperties);
         producerProperties.setPartitionKeyExpression(parser.parseExpression("whatever"));
 
         target.setDestination(null);

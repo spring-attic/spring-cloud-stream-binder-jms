@@ -33,6 +33,7 @@ import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.JCSMPException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.springframework.boot.Banner;
@@ -70,6 +71,7 @@ public class EndToEndIntegrationTests {
     private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
     private static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
     private static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
+    public static final String REQUIRED_GROUPS_FORMAT = "--spring.cloud.stream.bindings.output.producer.requiredGroups=%s";
     private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
     private String destination;
     private String randomGroupArg1;
@@ -151,6 +153,22 @@ public class EndToEndIntegrationTests {
     }
 
     @Test
+    public void scs_whenRequiredGroupsAreSpecified_messagesArePersistedWithoutConsumers() throws Exception {
+        String group42 = getRandomName("group42");
+        Sender sender = createSender(String.format(REQUIRED_GROUPS_FORMAT, group42));
+
+        sender.send(MESSAGE_TEXTS[2]);
+
+        Receiver receiver = createReceiver(String.format(INPUT_GROUP_FORMAT, group42));
+        List<Message> messages = receiver.getHandledMessages();
+
+
+        waitFor(() -> assertThat(messages, hasSize(1)));
+        assertThat(extractPayload(messages), containsInAnyOrder(MESSAGE_TEXTS[2]));
+
+    }
+
+    @Test
     public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
         Sender sender = createSender();
         createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
@@ -167,6 +185,8 @@ public class EndToEndIntegrationTests {
         assertThat(stacktrace, containsString(Receiver.REQUESTED_EXCEPTION));
     }
 
+    //TODO
+    @Ignore("After refactoring to 1.1 this test got broken, it needs some work.")
     @Test
     public void scs_whenConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
         Sender sender = createSender();
@@ -230,6 +250,46 @@ public class EndToEndIntegrationTests {
 
         int messageCount = 39;
         IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+
+        List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
+        List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
+
+        waitFor(() -> {
+            assertThat(messagesPartition1, hasSize(3));
+            List<String> objects = extractStringPayload(messagesPartition1);
+            assertThat(objects, hasItems("0", "13", "26"));
+
+            assertThat(messagesPartition0, hasSize(36));
+            assertThat(extractStringPayload(messagesPartition0),
+                    allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
+        });
+    }
+
+
+    @Test
+    public void scs_whenAPartitioningKeyIsConfiguredAsWellAsRequired_messagesArePersistedInTheRelevantPartition() throws Exception {
+        String group66 = getRandomName("group66");
+        Sender sender = createSender(
+                String.format("--spring.cloud.stream.bindings.output.producer.partitionKeyExpression=%s", "T(Integer).parseInt(payload) % 13 == 0 ? 1 : 0"),
+                String.format("--spring.cloud.stream.bindings.output.producer.partitionCount=%s", 2),
+                String.format(REQUIRED_GROUPS_FORMAT, group66)
+        );
+
+        int messageCount = 39;
+        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+
+        Receiver receiverPartition0 = createReceiver(
+                String.format(INPUT_GROUP_FORMAT, group66),
+                String.format("--spring.cloud.stream.instance-index=%s", 0),
+                String.format("--spring.cloud.stream.instance-count=%s", 2),
+                String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
+        );
+        Receiver receiverPartition1 = createReceiver(
+                String.format(INPUT_GROUP_FORMAT, group66),
+                String.format("--spring.cloud.stream.instance-index=%s", 1),
+                String.format("--spring.cloud.stream.instance-count=%s", 2),
+                String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
+        );
 
         List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
         List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();

@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.jms;
+package org.springframework.cloud.stream.binder.jms.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.stream.binder.Binder;
@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration
 @ConditionalOnMissingBean(Binder.class)
-@Import({JMSChannelBinderConfiguration.class, KryoCodecAutoConfiguration.class})
-public class JMSAutoConfiguration {
+@Import({JmsBinderGlobalConfiguration.class, KryoCodecAutoConfiguration.class})
+public class JmsBinderAutoConfiguration {
 
 }

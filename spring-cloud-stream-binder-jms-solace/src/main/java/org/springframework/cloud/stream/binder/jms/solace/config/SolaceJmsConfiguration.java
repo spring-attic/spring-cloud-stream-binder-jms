@@ -22,20 +22,17 @@ import javax.jms.ConnectionFactory;
 import com.solacesystems.jms.SolConnectionFactoryImpl;
 import com.solacesystems.jms.property.JMSProperties;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration;
 import org.springframework.boot.autoconfigure.jms.JndiConnectionFactoryAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.config.JmsBinderAutoConfiguration;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceQueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.jms.core.JmsTemplate;
 
 /**
  * Solace specific configuration.
@@ -50,7 +47,7 @@ import org.springframework.jms.core.JmsTemplate;
  */
 @Configuration
 //It is important to include the root JMS configuration class.
-@Import(org.springframework.cloud.stream.binder.jms.JMSAutoConfiguration.class)
+@Import(JmsBinderAutoConfiguration.class)
 @AutoConfigureAfter({JndiConnectionFactoryAutoConfiguration.class})
 @ConditionalOnClass({ConnectionFactory.class, SolConnectionFactoryImpl.class})
 @ConditionalOnMissingBean(ConnectionFactory.class)
