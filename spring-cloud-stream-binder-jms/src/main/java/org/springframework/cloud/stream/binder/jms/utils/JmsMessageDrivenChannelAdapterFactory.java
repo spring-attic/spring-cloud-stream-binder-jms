@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import javax.jms.BytesMessage;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Session;
@@ -69,7 +70,11 @@ public class JmsMessageDrivenChannelAdapterFactory {
                                         } catch (JMSException e) {
                                             logger.error("Failed to send message",
                                                     e);
+                                            resetMessageIfRequired(jmsMessage);
                                             throw new RuntimeException(e);
+                                        } catch (Exception e){
+                                            resetMessageIfRequired(jmsMessage);
+                                            throw e;
                                         }
                                         return null;
                                     },
@@ -89,6 +94,13 @@ public class JmsMessageDrivenChannelAdapterFactory {
                         }
                     }
             );
+    }
+
+    private void resetMessageIfRequired(Message jmsMessage) throws JMSException {
+        if (jmsMessage instanceof BytesMessage) {
+            BytesMessage message = (BytesMessage) jmsMessage;
+            message.reset();
+        }
     }
 
     private RetryTemplate getRetryTemplate(ConsumerProperties properties) {

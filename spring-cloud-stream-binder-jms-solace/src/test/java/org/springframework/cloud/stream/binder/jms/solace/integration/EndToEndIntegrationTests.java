@@ -33,7 +33,6 @@ import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.JCSMPException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.springframework.boot.Banner;
@@ -185,8 +184,6 @@ public class EndToEndIntegrationTests {
         assertThat(stacktrace, containsString(Receiver.REQUESTED_EXCEPTION));
     }
 
-    //TODO
-    @Ignore("After refactoring to 1.1 this test got broken, it needs some work.")
     @Test
     public void scs_whenConsumerFails_retriesTheSpecifiedAmountOfTimes() throws Exception {
         Sender sender = createSender();
