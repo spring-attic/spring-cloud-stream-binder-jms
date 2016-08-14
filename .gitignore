@@ -3,3 +3,4 @@ target
 **/*.jar
 spring-cloud-stream-binder-jms/activemq-data/
 
+.idea/

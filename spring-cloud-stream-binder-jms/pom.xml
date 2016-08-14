@@ -39,9 +39,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.activemq</groupId>
-            <artifactId>activemq-core</artifactId>
-            <version>5.5.0</version>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream-binder-jms-test-support</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
