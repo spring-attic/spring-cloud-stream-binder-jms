@@ -40,7 +40,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
-import static org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils.startEmbeddedActiveMQServer;
 import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer.*;
 
 public class RepublishMessageRecovererTests {
@@ -56,7 +55,18 @@ public class RepublishMessageRecovererTests {
     @BeforeClass
     public static void initTests() throws Exception {
 
-        ActiveMQConnectionFactory connectionFactory = startEmbeddedActiveMQServer();
+        BrokerService broker = new BrokerService();
+
+        File testDataDir = new File("target/activemq-data/QueuePurgeTest");
+        broker.setDataDirectoryFile(testDataDir);
+        broker.setUseJmx(true);
+        broker.setDeleteAllMessagesOnStartup(true);
+        KahaDBPersistenceAdapter persistenceAdapter = new KahaDBPersistenceAdapter();
+        persistenceAdapter.setDirectory(new File(testDataDir, "kahadb"));
+        broker.setPersistenceAdapter(persistenceAdapter);
+        broker.addConnector("tcp://localhost:0");
+        broker.start();
+        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(broker.getTransportConnectors().get(0).getConnectUri().toString());
 
         jmsTemplate = new JmsTemplate(connectionFactory);
         jmsTemplate.setDefaultDestinationName("my-fancy-queue");

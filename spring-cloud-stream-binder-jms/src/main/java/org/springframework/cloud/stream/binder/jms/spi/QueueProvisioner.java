@@ -16,6 +16,8 @@
 
 package org.springframework.cloud.stream.binder.jms.spi;
 
+import javax.jms.Destination;
+
 /**
  * SPI defining vendor-specific provisioning methods to grant compatibility
  * with the JMS binder.
@@ -39,7 +41,7 @@ public interface QueueProvisioner {
      * @param topicName the name of the topic
      * @param consumerGroupName the name of the consumer group
      */
-    void provisionTopicAndConsumerGroup(String topicName, String... consumerGroupName);
+    Destinations provisionTopicAndConsumerGroup(String topicName, String... consumerGroupName);
 
     /**
      * Creates the Dead Letter Queue (DLQ) where messages that cannot be
@@ -58,4 +60,22 @@ public interface QueueProvisioner {
      * @return the name of the created DLQ.
      */
     String provisionDeadLetterQueue();
+
+    final class Destinations{
+        private final Destination topic;
+        private final Destination[] groups;
+
+        public Destinations(Destination topic, Destination[] groups) {
+            this.topic = topic;
+            this.groups = groups;
+        }
+
+        public Destination getTopic() {
+            return topic;
+        }
+
+        public Destination[] getGroups() {
+            return groups;
+        }
+    }
 }

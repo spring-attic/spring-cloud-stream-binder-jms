@@ -44,8 +44,8 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
     }
 
     @Override
-    public void provisionTopicAndConsumerGroup(String name, String... groups) {
-        if (ArrayUtils.isEmpty(groups)) return;
+    public Destinations provisionTopicAndConsumerGroup(String name, String... groups) {
+        if (ArrayUtils.isEmpty(groups)) return null;//TODO: return JMS Destinations
 
         try {
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
@@ -66,6 +66,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         } catch (JCSMPException e) {
             throw new RuntimeException(e);
         }
+        return null;//TODO: return JMS Destinations
     }
 
     @Override

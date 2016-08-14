@@ -13,6 +13,7 @@
         <module>spring-cloud-stream-binder-jms</module>
         <module>spring-cloud-stream-binder-jms-solace</module>
         <module>spring-cloud-stream-binder-jms-test-support</module>
+        <module>spring-cloud-stream-binder-jms-activemq</module>
     </modules>
 
     <parent>
@@ -34,6 +35,13 @@
     </dependencyManagement>
 
     <dependencies>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+
         <!--Test dependencies-->
         <dependency>
             <groupId>com.google.guava</groupId>
