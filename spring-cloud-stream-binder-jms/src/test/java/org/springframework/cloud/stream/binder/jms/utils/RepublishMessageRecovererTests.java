@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
 
@@ -54,19 +55,7 @@ public class RepublishMessageRecovererTests {
 
     @BeforeClass
     public static void initTests() throws Exception {
-
-        BrokerService broker = new BrokerService();
-
-        File testDataDir = new File("target/activemq-data/QueuePurgeTest");
-        broker.setDataDirectoryFile(testDataDir);
-        broker.setUseJmx(true);
-        broker.setDeleteAllMessagesOnStartup(true);
-        KahaDBPersistenceAdapter persistenceAdapter = new KahaDBPersistenceAdapter();
-        persistenceAdapter.setDirectory(new File(testDataDir, "kahadb"));
-        broker.setPersistenceAdapter(persistenceAdapter);
-        broker.addConnector("tcp://localhost:0");
-        broker.start();
-        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(broker.getTransportConnectors().get(0).getConnectUri().toString());
+        ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
 
         jmsTemplate = new JmsTemplate(connectionFactory);
         jmsTemplate.setDefaultDestinationName("my-fancy-queue");

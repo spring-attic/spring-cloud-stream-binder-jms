@@ -17,7 +17,7 @@ public abstract class ActiveMQTestUtils {
     public static ActiveMQConnectionFactory startEmbeddedActiveMQServer() throws Exception {
         BrokerService broker = new BrokerService();
 
-        File testDataDir = new File("target/activemq-data/QueuePurgeTest");
+        File testDataDir = new File("target/activemq-data/tests");
         broker.setDataDirectoryFile(testDataDir);
         broker.setUseJmx(true);
         broker.setDeleteAllMessagesOnStartup(true);
