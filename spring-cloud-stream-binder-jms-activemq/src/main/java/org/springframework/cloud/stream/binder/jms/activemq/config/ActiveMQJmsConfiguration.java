@@ -43,7 +43,6 @@ import javax.jms.ConnectionFactory;
 @Import(JmsBinderAutoConfiguration.class)
 @AutoConfigureAfter({JndiConnectionFactoryAutoConfiguration.class})
 @ConditionalOnClass({ConnectionFactory.class, ActiveMQConnectionFactory.class})
-@ConditionalOnMissingBean(ConnectionFactory.class)
 @EnableConfigurationProperties(ActiveMQConfigurationProperties.class)
 public class ActiveMQJmsConfiguration {
 
@@ -54,8 +53,8 @@ public class ActiveMQJmsConfiguration {
     }
 
     @Bean
-    public ActiveMQQueueProvisioner solaceQueueProvisioner(ActiveMQConfigurationProperties config) throws Exception {
-        return new ActiveMQQueueProvisioner(connectionFactory(config));
+    public ActiveMQQueueProvisioner solaceQueueProvisioner(ActiveMQConnectionFactory connectionFactory) throws Exception {
+        return new ActiveMQQueueProvisioner(connectionFactory);
     }
 
 }

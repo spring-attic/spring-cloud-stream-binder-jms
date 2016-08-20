@@ -18,7 +18,6 @@ package org.springframework.cloud.stream.binder.jms.spi;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import javax.jms.Destination;
 import javax.jms.Queue;
 import javax.jms.Topic;
 

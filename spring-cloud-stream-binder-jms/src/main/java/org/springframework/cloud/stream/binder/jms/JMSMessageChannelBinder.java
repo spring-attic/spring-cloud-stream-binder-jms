@@ -16,14 +16,8 @@
 
 package org.springframework.cloud.stream.binder.jms;
 
-import java.util.Collection;
-import java.util.Map;
-import javax.jms.JMSException;
-import javax.jms.Queue;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.cloud.stream.binder.AbstractMessageChannelBinder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
@@ -31,6 +25,10 @@ import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.*;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
 import org.springframework.messaging.MessageHandler;
+
+import javax.jms.JMSException;
+import javax.jms.Queue;
+import java.util.Collection;
 
 /**
  * Binder definition for JMS.

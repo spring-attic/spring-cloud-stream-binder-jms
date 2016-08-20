@@ -41,11 +41,12 @@ import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessage
 
 public class RepublishMessageRecovererTests {
 
+    public static final String DEAD_LETTER_QUEUE = "dead-letter-queue";
     static RepublishMessageRecoverer target;
     static RepublishMessageRecoverer additionalHeadersTarget;
     static JmsTemplate jmsTemplate;
     static QueueProvisioner queueProvisioner = mock(QueueProvisioner.class);
-    private final Message message = createMessage(ImmutableMap.of("fancy", "header"));
+    private Message message = createMessage(ImmutableMap.of("fancy", "header"));
     private final String exceptionMessage = "I am an unhappy exception";
     private Throwable cause = new RuntimeException(exceptionMessage);
 
@@ -62,12 +63,13 @@ public class RepublishMessageRecovererTests {
     @Before
     public void setUp() throws Exception {
         Mockito.reset(queueProvisioner);
-        when(queueProvisioner.provisionDeadLetterQueue()).thenReturn("dead-letter-queue");
+        when(queueProvisioner.provisionDeadLetterQueue()).thenReturn(DEAD_LETTER_QUEUE);
     }
 
     @Test
     public void recover_provisionsDeadLetterQueue() throws Exception {
         target.recover(createMessage(ImmutableMap.of("fancy", "header")), cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         verify(queueProvisioner, times(1)).provisionDeadLetterQueue();
     }
@@ -75,6 +77,7 @@ public class RepublishMessageRecovererTests {
     @Test
     public void recover_addsStacktraceToMessageHeaders() throws Exception {
         target.recover(message, cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty(X_EXCEPTION_STACKTRACE), containsString(exceptionMessage));
     }
@@ -84,6 +87,7 @@ public class RepublishMessageRecovererTests {
         Throwable nestedCause = new RuntimeException("I am the parent", cause);
 
         target.recover(message, nestedCause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty(X_EXCEPTION_MESSAGE), is(exceptionMessage));
 
@@ -92,6 +96,7 @@ public class RepublishMessageRecovererTests {
     @Test
     public void recover_addsCauseMessageToHeaders() throws Exception {
         target.recover(message, cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty(X_EXCEPTION_MESSAGE), is(exceptionMessage));
     }
@@ -99,6 +104,7 @@ public class RepublishMessageRecovererTests {
     @Test
     public void recover_addsOriginalDestinationToMessageHeaders() throws Exception {
         target.recover(message, cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty(X_ORIGINAL_QUEUE), is("queue://my-fancy-queue"));
     }
@@ -106,6 +112,7 @@ public class RepublishMessageRecovererTests {
     @Test
     public void recover_retainsExistingMessageProperties() throws Exception {
         target.recover(message, cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty("fancy"), is("header"));
     }
@@ -114,13 +121,14 @@ public class RepublishMessageRecovererTests {
     public void recover_sendsMessageToDLQ() throws Exception {
         target.recover(message, cause);
 
-        Object deadLetter = jmsTemplate.receiveAndConvert("dead-letter-queue");
+        Object deadLetter = jmsTemplate.receiveAndConvert(DEAD_LETTER_QUEUE);
         assertThat(deadLetter, is("Amazing payload"));
     }
 
     @Test
     public void recover_whenAdditionalHeadersMethodProvided_addsDefinedHeaders() throws Exception {
         additionalHeadersTarget.recover(message, cause);
+        message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
         assertThat(message.getStringProperty("additional"), is("extra-header"));
     }

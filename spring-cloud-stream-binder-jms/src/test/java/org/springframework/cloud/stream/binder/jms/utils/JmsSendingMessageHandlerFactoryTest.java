@@ -17,15 +17,12 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.junit.Test;
-
 import org.springframework.beans.factory.BeanFactory;
-import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**

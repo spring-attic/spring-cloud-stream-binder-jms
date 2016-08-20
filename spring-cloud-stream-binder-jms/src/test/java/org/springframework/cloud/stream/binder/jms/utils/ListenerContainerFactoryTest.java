@@ -16,16 +16,15 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import org.hamcrest.core.Is;
+import org.junit.Test;
+import org.springframework.jms.listener.AbstractMessageListenerContainer;
+
 import javax.jms.ConnectionFactory;
 import javax.jms.Queue;
 
-import org.hamcrest.core.Is;
-import org.junit.Test;
-
-import org.springframework.jms.listener.AbstractMessageListenerContainer;
-
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.util.ReflectionTestUtils.getField;
 

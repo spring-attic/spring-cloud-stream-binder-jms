@@ -16,20 +16,21 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Map;
-import javax.jms.JMSException;
-import javax.jms.Message;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.support.converter.MessageConverter;
+import org.springframework.jms.support.converter.SimpleMessageConverter;
 import org.springframework.messaging.MessageHeaders;
+
+import javax.jms.JMSException;
+import javax.jms.Message;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Map;
 
 /**
  * {@link MessageRecoverer} implementation that republishes recovered messages
@@ -67,6 +68,15 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
         String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
 
         JmsHeaderMapper mapper = new DefaultJmsHeaderMapper();
+        MessageConverter converter = new SimpleMessageConverter();
+        Object payload = null;
+
+        try {
+            payload = converter.fromMessage(undeliveredMessage);
+        } catch (JMSException e) {
+            logger.error("The message payload could not be retrieved. It will be lost.", e);
+        }
+
         Map<String, Object> headers = mapper.toHeaders(undeliveredMessage);
         headers.put(X_EXCEPTION_STACKTRACE, getStackTraceAsString(cause));
         headers.put(X_EXCEPTION_MESSAGE, cause.getCause() != null ? cause.getCause().getMessage() : cause.getMessage());
@@ -79,14 +89,11 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
         if (additionalHeaders != null) {
             headers.putAll(additionalHeaders);
         }
-        try {
-            undeliveredMessage.clearProperties();
-        } catch (JMSException e) {
-            throw new RuntimeException(e);
-        }
-        mapper.fromHeaders(new MessageHeaders(headers), undeliveredMessage);
 
-        jmsTemplate.convertAndSend(deadLetterQueueName, undeliveredMessage);
+        jmsTemplate.convertAndSend(deadLetterQueueName, payload, message -> {
+            mapper.fromHeaders(new MessageHeaders(headers), message);
+            return message;
+        });
 
     }
 

@@ -2,7 +2,6 @@ package org.springframework.cloud.stream.binder.jms.utils;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.OptionalInt;
 
 /**
  * @author José Carlos Valero

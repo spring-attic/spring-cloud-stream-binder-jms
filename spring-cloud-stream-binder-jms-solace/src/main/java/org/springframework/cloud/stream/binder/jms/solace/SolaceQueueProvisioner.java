@@ -17,19 +17,15 @@
 package org.springframework.cloud.stream.binder.jms.solace;
 
 import com.solacesystems.jcsmp.*;
-import com.solacesystems.jcsmp.Queue;
-import com.solacesystems.jcsmp.Topic;
 import com.solacesystems.jcsmp.impl.DurableTopicEndpointImpl;
 import com.solacesystems.jms.SolJmsUtility;
 import org.apache.commons.lang.ArrayUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.jms.support.JmsUtils;
-import org.springframework.util.StreamUtils;
 
-import javax.jms.*;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 
 /**
  * {@link QueueProvisioner} for Solace.

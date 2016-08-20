@@ -10,11 +10,11 @@
     <version>1.0-SNAPSHOT</version>
 
     <modules>
+        <module>spring-cloud-stream-binder-jms-test-support</module>
+        <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
         <module>spring-cloud-stream-binder-jms</module>
         <module>spring-cloud-stream-binder-jms-solace</module>
-        <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
         <module>spring-cloud-stream-binder-jms-activemq</module>
-        <module>spring-cloud-stream-binder-jms-test-support</module>
     </modules>
 
     <parent>

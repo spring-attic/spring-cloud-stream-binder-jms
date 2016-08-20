@@ -17,11 +17,7 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.springframework.beans.factory.BeanFactory;
-import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
-
-import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HEADER;
 
 /**
  * Factory to create JMS message handlers

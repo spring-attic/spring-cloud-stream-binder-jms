@@ -1,7 +1,6 @@
 package org.springframework.cloud.stream.binder.jms.activemq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.jms.support.JmsUtils;
@@ -9,11 +8,14 @@ import org.springframework.jms.support.JmsUtils;
 import javax.jms.*;
 
 /**
+ * {@link QueueProvisioner} for ActiveMQ.
+ *
  * @author José Carlos Valero
  * @since 1.1
  */
 public class ActiveMQQueueProvisioner implements QueueProvisioner{
 
+    public static final String ACTIVE_MQ_DLQ = "ActiveMQ.DLQ";
     private final ActiveMQConnectionFactory connectionFactory;
 
     public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory) {
@@ -39,7 +41,7 @@ public class ActiveMQQueueProvisioner implements QueueProvisioner{
 
             JmsUtils.commitIfNecessary(session);
             JmsUtils.closeSession(session);
-            JmsUtils.closeConnection(activeMQConnection;
+            JmsUtils.closeConnection(activeMQConnection);
         } catch (JMSException e) {
             e.printStackTrace();
         }

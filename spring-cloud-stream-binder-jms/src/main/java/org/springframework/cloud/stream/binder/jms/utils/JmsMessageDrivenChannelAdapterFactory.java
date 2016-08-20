@@ -16,14 +16,14 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import javax.jms.*;
-
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
 import org.springframework.integration.jms.ChannelPublishingJmsMessageListener;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+
+import javax.jms.*;
 
 /**
  * Component responsible of building up endpoint required to bind consumers.

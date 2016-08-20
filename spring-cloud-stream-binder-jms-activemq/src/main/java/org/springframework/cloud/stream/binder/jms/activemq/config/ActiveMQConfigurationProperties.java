@@ -19,9 +19,6 @@ package org.springframework.cloud.stream.binder.jms.activemq.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-
 /**
  * Configuration properties for ActiveMQ specific features.
  *

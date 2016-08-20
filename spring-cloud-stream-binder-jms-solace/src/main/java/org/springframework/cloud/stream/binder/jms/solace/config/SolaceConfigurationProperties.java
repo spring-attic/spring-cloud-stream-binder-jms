@@ -17,10 +17,10 @@
 package org.springframework.cloud.stream.binder.jms.solace.config;
 
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
-
-import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Configuration properties for Solace specific features.
  *

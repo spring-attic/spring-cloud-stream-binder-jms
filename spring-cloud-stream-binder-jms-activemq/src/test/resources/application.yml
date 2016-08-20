@@ -6,4 +6,9 @@ spring:
   jmx:
     enabled: false
 
+
 debug: false
+activemq:
+  host: localhost:44029
+  username:
+  password:

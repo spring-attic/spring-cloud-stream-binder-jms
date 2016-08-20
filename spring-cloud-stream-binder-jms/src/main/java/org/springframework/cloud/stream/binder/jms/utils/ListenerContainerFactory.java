@@ -16,12 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.Queue;
-
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
-import org.springframework.stereotype.Component;
+
+import javax.jms.ConnectionFactory;
+import javax.jms.Queue;
 
 /**
  * Factory to create Jms ListenerContainer

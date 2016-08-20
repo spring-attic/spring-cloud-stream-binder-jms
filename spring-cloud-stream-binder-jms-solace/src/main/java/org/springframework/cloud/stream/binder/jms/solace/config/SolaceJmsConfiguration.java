@@ -16,12 +16,8 @@
 
 package org.springframework.cloud.stream.binder.jms.solace.config;
 
-import java.util.Hashtable;
-import javax.jms.ConnectionFactory;
-
 import com.solacesystems.jms.SolConnectionFactoryImpl;
 import com.solacesystems.jms.property.JMSProperties;
-
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,6 +29,9 @@ import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.jms.ConnectionFactory;
+import java.util.Hashtable;
 
 /**
  * Solace specific configuration.

@@ -23,11 +23,11 @@ import org.junit.Test;
 import org.springframework.boot.Banner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication.Receiver;
 import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication;
 import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication.Sender;
-import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.messaging.Message;
@@ -96,7 +96,9 @@ public abstract class EndToEndIntegrationTests {
         deprovisionDLQ();
     }
 
-    protected abstract void deprovisionDLQ() throws Exception;
+    protected void deprovisionDLQ() throws Exception {
+        return;
+    }
 
     @Test
     public void scs_whenMultipleConsumerGroups_eachGroupGetsAllMessages() throws Exception {

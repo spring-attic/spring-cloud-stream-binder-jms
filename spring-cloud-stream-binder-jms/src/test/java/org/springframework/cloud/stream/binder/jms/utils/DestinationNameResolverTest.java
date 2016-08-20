@@ -16,16 +16,14 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import java.util.Collection;
-import java.util.Map;
-
 import org.junit.Test;
-
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 
+import java.util.Collection;
+
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author José Carlos Valero

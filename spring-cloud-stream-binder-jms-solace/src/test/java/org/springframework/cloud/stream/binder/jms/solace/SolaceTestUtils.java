@@ -16,23 +16,21 @@
 
 package org.springframework.cloud.stream.binder.jms.solace;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
 import com.solacesystems.jcsmp.transaction.TransactedSession;
-
 import com.solacesystems.jms.SolJmsUtility;
 import org.springframework.beans.factory.config.YamlMapFactoryBean;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.jms.ConnectionFactory;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.solacesystems.jcsmp.JCSMPSession.FLAG_IGNORE_DOES_NOT_EXIST;
 import static com.solacesystems.jcsmp.JCSMPSession.WAIT_FOR_CONFIRM;

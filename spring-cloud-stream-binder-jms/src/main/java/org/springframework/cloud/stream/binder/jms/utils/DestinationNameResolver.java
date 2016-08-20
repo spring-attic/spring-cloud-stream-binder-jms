@@ -16,11 +16,13 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import java.util.*;
-import java.util.stream.IntStream;
-
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.stream.IntStream;
 
 /**
  * Component responsible of building up the name of a specific queue given some context

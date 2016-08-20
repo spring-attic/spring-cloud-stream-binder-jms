@@ -16,20 +16,19 @@
 
 package org.springframework.cloud.stream.binder.jms.solace;
 
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
-
 import com.google.common.collect.Iterables;
 import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.transaction.TransactedSession;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.CountingListener;
 import org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.RollbackListener;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;

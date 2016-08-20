@@ -17,7 +17,6 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.springframework.context.Lifecycle;
-import org.springframework.integration.IntegrationMessageHeaderAccessor;
 import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
