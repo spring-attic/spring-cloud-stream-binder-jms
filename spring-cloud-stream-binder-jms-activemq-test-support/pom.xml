@@ -9,13 +9,22 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>spring-cloud-stream-binder-jms-test-support</artifactId>
+    <artifactId>spring-cloud-stream-binder-jms-activemq-test-support</artifactId>
+
+    <properties>
+        <activemq.version>5.14.0</activemq.version>
+    </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <artifactId>activemq-core</artifactId>
-            <version>5.5.0</version>
+            <artifactId>activemq-broker</artifactId>
+            <version>${activemq.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-kahadb-store</artifactId>
+            <version>${activemq.version}</version>
         </dependency>
     </dependencies>
 

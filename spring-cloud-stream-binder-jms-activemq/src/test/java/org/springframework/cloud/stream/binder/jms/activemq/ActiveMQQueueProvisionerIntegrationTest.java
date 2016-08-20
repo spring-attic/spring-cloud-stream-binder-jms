@@ -3,9 +3,12 @@ package org.springframework.cloud.stream.binder.jms.activemq;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.jms.core.JmsTemplate;
 
 import javax.jms.*;
@@ -23,24 +26,49 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class ActiveMQQueueProvisionerIntegrationTest {
 
+    private static JmsTemplate jmsTemplate;
+    private static ActiveMQQueueProvisioner target;
+    private static ActiveMQConnectionFactory activeMQConnectionFactory;
+
+    @BeforeClass
+    public static void initTests() throws Exception {
+        activeMQConnectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
+        jmsTemplate = new JmsTemplate(activeMQConnectionFactory);
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        target = new ActiveMQQueueProvisioner(activeMQConnectionFactory);
+    }
 
     @Test
     public void provisionTopicAndConsumerGroup_whenSingleGroup_createsInfrastructure() throws Exception {
-        ActiveMQConnectionFactory activeMQConnectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-        ActiveMQQueueProvisioner target = new ActiveMQQueueProvisioner(activeMQConnectionFactory);
-        JmsTemplate jmsTemplate = new JmsTemplate(activeMQConnectionFactory);
-
         QueueProvisioner.Destinations destinations = target.provisionTopicAndConsumerGroup("topic", "group1");
         Destination group = destinations.getGroups()[0];
         Destination topic = destinations.getTopic();
 
-        jmsTemplate.convertAndSend(topic, "hi activemq");
-        CountingListener messageListener = new CountingListener(1);
-        activeMQConnectionFactory.createConnection().createSession(true,0).createConsumer(group).setMessageListener(messageListener);
-        messageListener.awaitExpectedMessages();
+        jmsTemplate.convertAndSend(topic, "hi jms scs");
+        Object payloadGroup1 = jmsTemplate.receiveAndConvert(group);
 
-        assertThat(messageListener.getPayloads().get(0)).isEqualTo("hi activemq");
+        assertThat(payloadGroup1).isEqualTo("hi jms scs");
     }
+
+    @Test
+    public void provisionTopicAndConsumerGroup_whenMultipleGroups_createsInfrastructure() throws Exception {
+        QueueProvisioner.Destinations destinations = target.provisionTopicAndConsumerGroup("topic", "group1", "group2");
+        Destination group1 = destinations.getGroups()[0];
+        Destination group2 = destinations.getGroups()[1];
+        Destination topic = destinations.getTopic();
+
+        jmsTemplate.convertAndSend(topic, "hi groups");
+        Object payloadGroup1 = jmsTemplate.receiveAndConvert(group1);
+        Object payloadGroup2 = jmsTemplate.receiveAndConvert(group2);
+
+        assertThat(payloadGroup1).isEqualTo("hi groups");
+        assertThat(payloadGroup2).isEqualTo("hi groups");
+    }
+
+
 
     private class CountingListener implements MessageListener {
         private final CountDownLatch latch;

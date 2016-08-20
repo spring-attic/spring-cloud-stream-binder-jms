@@ -4,3 +4,4 @@ target
 spring-cloud-stream-binder-jms/activemq-data/
 
 .idea/
+**/hs_err_pid*.log

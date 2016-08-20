@@ -40,7 +40,7 @@
 
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-jms-test-support</artifactId>
+            <artifactId>spring-cloud-stream-binder-jms-activemq-test-support</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

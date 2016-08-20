@@ -16,26 +16,22 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import java.io.File;
-import java.util.Map;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-
 import com.google.common.collect.ImmutableMap;
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
+
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
