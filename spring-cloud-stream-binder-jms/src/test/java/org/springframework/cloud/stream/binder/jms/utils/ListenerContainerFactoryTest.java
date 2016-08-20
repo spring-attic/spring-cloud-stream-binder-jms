@@ -17,6 +17,7 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Queue;
 
 import org.hamcrest.core.Is;
 import org.junit.Test;
@@ -35,9 +36,10 @@ public class ListenerContainerFactoryTest {
         ConnectionFactory factory = mock(ConnectionFactory.class);
         ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(factory);
 
-        AbstractMessageListenerContainer messageListenerContainer = listenerContainerFactory.build("my channel");
+        Queue queue = mock(Queue.class);
+        AbstractMessageListenerContainer messageListenerContainer = listenerContainerFactory.build(queue);
 
-        assertThat(messageListenerContainer.getDestinationName(), Is.is("my channel"));
+        assertThat(messageListenerContainer.getDestination(), Is.is(queue));
         assertThat(messageListenerContainer.getConnectionFactory(), Is.is(factory));
         assertThat(getField(messageListenerContainer, "pubSubDomain"), Is.is(false));
         assertThat("Transacted is not true. Transacted is required for guaranteed deliveries. " +

@@ -46,8 +46,8 @@ public class JmsBinderGlobalConfiguration {
     private ConnectionFactory connectionFactory;
 
     @Bean
-    public QueueNameResolver queueNameResolver() throws Exception {
-        return new QueueNameResolver();
+    public DestinationNameResolver queueNameResolver() throws Exception {
+        return new DestinationNameResolver();
     }
 
     @ConditionalOnMissingBean(MessageRecoverer.class)
@@ -87,12 +87,12 @@ public class JmsBinderGlobalConfiguration {
         JMSMessageChannelBinder jmsMessageChannelBinder(QueueProvisioner queueProvisioner,
                                                         Codec codec,
                                                         JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
-                                                        QueueNameResolver queueNameResolver,
+                                                        DestinationNameResolver destinationNameResolver,
                                                         JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory) throws Exception {
 
             JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(
                     queueProvisioner,
-                    queueNameResolver,
+                    destinationNameResolver,
                     jmsSendingMessageHandlerFactory,
                     jmsMessageDrivenChannelAdapterFactory
             );

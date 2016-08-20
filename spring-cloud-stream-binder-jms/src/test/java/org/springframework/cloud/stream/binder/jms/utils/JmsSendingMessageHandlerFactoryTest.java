@@ -34,7 +34,7 @@ import static org.mockito.Mockito.mock;
  */
 public class JmsSendingMessageHandlerFactoryTest {
 
-    public static final String DESTINATION_NAME = "a-destination";
+    public static final TopicPartitionRegistrar TOPIC_PARTITION_REGISTRAR = new TopicPartitionRegistrar();
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
     BeanFactory beanFactory = mock(BeanFactory.class);
     private JmsSendingMessageHandlerFactory target = new JmsSendingMessageHandlerFactory(jmsTemplate,beanFactory);
@@ -43,21 +43,16 @@ public class JmsSendingMessageHandlerFactoryTest {
 
     @Test
     public void build_createsAHandlerWithTheProvidedParameters() throws Exception {
-        ProducerProperties properties = new ProducerProperties();
-
-        JmsSendingMessageHandler handler = target.build(DESTINATION_NAME, properties);
+        PartitionAwareJmsSendingMessageHandler handler = target.build(TOPIC_PARTITION_REGISTRAR);
 
         assertThat(ReflectionTestUtils.getField(handler, "jmsTemplate"), is(jmsTemplate));
-        assertThat(ReflectionTestUtils.getField(handler, "producerProperties"), is(properties));
     }
 
     @Test
     public void build_configuresTheHandlerWithDestinationAndBeanFactory() throws Exception {
-        ProducerProperties properties = new ProducerProperties();
+        PartitionAwareJmsSendingMessageHandler handler = target.build(TOPIC_PARTITION_REGISTRAR);
 
-        JmsSendingMessageHandler handler = target.build(DESTINATION_NAME, properties);
-
-        assertThat(ReflectionTestUtils.getField(handler, "destinationName"), is(DESTINATION_NAME));
+        assertThat(ReflectionTestUtils.getField(handler, "destinations"), is(TOPIC_PARTITION_REGISTRAR));
         assertThat(ReflectionTestUtils.getField(handler, "beanFactory"), is(beanFactory));
     }
 }

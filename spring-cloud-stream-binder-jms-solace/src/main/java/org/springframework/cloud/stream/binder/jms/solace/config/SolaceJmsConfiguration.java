@@ -69,7 +69,7 @@ public class SolaceJmsConfiguration {
     }
 
     @Bean
-    public QueueProvisioner solaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) {
+    public QueueProvisioner solaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) throws Exception {
         return new SolaceQueueProvisioner(solaceConfigurationProperties);
     }
 

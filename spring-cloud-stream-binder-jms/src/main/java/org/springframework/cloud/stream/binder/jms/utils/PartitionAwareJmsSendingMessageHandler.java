@@ -16,14 +16,18 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import javax.jms.Destination;
-
-import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.context.Lifecycle;
-import org.springframework.expression.Expression;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.integration.IntegrationMessageHeaderAccessor;
+import org.springframework.integration.handler.AbstractMessageHandler;
+import org.springframework.integration.jms.DefaultJmsHeaderMapper;
+import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessagePostProcessor;
+import org.springframework.messaging.Message;
+
+import javax.jms.Destination;
+import javax.jms.JMSException;
 
 import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HEADER;
 
@@ -37,40 +41,47 @@ import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HE
  * @author José Carlos Valero
  * @since 1.1
  */
-public class PartitionAwareJmsSendingMessageHandler extends JmsSendingMessageHandler implements Lifecycle {
+public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandler implements Lifecycle {
 
 
-    private final ProducerProperties producerProperties;
+    private JmsTemplate jmsTemplate;
+    private final TopicPartitionRegistrar destinations;
+    private volatile JmsHeaderMapper headerMapper = new DefaultJmsHeaderMapper();
 
     public PartitionAwareJmsSendingMessageHandler(JmsTemplate jmsTemplate,
-                                                  ProducerProperties producerProperties) {
-        super(jmsTemplate);
-        this.producerProperties = producerProperties;
+                                                  TopicPartitionRegistrar destinations) {
+        this.jmsTemplate = jmsTemplate;
+        this.destinations = destinations;
     }
 
-    @Override
-    public void setDestination(Destination destination) {
-        throw new UnsupportedOperationException(
-                "Destination is not supported. Please use destination name instead");
-    }
-
-    @Override
-    public void setDestinationName(String destinationName) {
-        if (!producerProperties.isPartitioned()) {
-            super.setDestinationName(destinationName);
-        } else {
-            sanitizeSpelConstant(destinationName);
-            Expression destinationExpression = new SpelExpressionParser()
-                    .parseExpression(String.format("'%s-' + headers['%s']",
-                            destinationName,PARTITION_HEADER));
-            super.setDestinationExpression(destinationExpression);
+    protected void handleMessageInternal(Message<?> message) throws Exception {
+        if(message == null) {
+            throw new IllegalArgumentException("message must not be null");
         }
+        Object destination = this.determineDestination(message);
+        Object objectToSend = message.getPayload();
+        HeaderMappingMessagePostProcessor messagePostProcessor = new HeaderMappingMessagePostProcessor(message, this.headerMapper);
+
+        this.jmsTemplate.convertAndSend((Destination)destination, objectToSend, messagePostProcessor);
     }
 
-    private void sanitizeSpelConstant(String spelConstant) {
-        if (spelConstant.contains("'"))
-            throw new IllegalArgumentException(
-                    "The value %s contains an illegal character \"'\" ");
+    private Destination determineDestination(Message<?> message) {
+        return destinations.getDestination(message.getHeaders().get(PARTITION_HEADER));
+    }
+
+    private static final class HeaderMappingMessagePostProcessor implements MessagePostProcessor {
+        private final Message<?> integrationMessage;
+        private final JmsHeaderMapper headerMapper;
+
+        private HeaderMappingMessagePostProcessor(Message<?> integrationMessage, JmsHeaderMapper headerMapper) {
+            this.integrationMessage = integrationMessage;
+            this.headerMapper = headerMapper;
+        }
+
+        public javax.jms.Message postProcessMessage(javax.jms.Message jmsMessage) throws JMSException {
+            this.headerMapper.fromHeaders(this.integrationMessage.getHeaders(), jmsMessage);
+            return jmsMessage;
+        }
     }
 
     /*

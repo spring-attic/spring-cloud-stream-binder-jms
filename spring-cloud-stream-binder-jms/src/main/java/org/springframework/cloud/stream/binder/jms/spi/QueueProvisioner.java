@@ -16,7 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.spi;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import javax.jms.Destination;
+import javax.jms.Queue;
+import javax.jms.Topic;
 
 /**
  * SPI defining vendor-specific provisioning methods to grant compatibility
@@ -62,20 +66,45 @@ public interface QueueProvisioner {
     String provisionDeadLetterQueue();
 
     final class Destinations{
-        private final Destination topic;
-        private final Destination[] groups;
+        private final Topic topic;
+        private final Queue[] groups;
 
-        public Destinations(Destination topic, Destination[] groups) {
+        public Destinations(Topic topic, Queue[] groups) {
             this.topic = topic;
             this.groups = groups;
         }
 
-        public Destination getTopic() {
+        public Topic getTopic() {
             return topic;
         }
 
-        public Destination[] getGroups() {
+        public Queue[] getGroups() {
             return groups;
+        }
+
+        public static class Factory{
+            private Topic topic;
+            private Queue[] groups;
+
+            public Factory withTopic(Topic topic){
+                this.topic = topic;
+                return this;
+            }
+
+            public Factory withGroups(Queue groups[]){
+                this.groups = groups;
+                return this;
+            }
+
+            public Factory addGroup(Queue group){
+                this.groups = (Queue[]) ArrayUtils.add(groups, group);
+                return this;
+            }
+
+            public Destinations build(){
+                return new Destinations(this.topic, this.groups);
+            }
+
         }
     }
 }

@@ -16,10 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import javax.jms.BytesMessage;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.Session;
+import javax.jms.*;
 
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
@@ -38,22 +35,21 @@ public class JmsMessageDrivenChannelAdapterFactory {
     final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
     private final ListenerContainerFactory listenerContainerFactory;
     private final MessageRecoverer messageRecoverer;
-    private final QueueNameResolver queueNameResolver;
+    private final DestinationNameResolver destinationNameResolver;
 
 
     public JmsMessageDrivenChannelAdapterFactory(ListenerContainerFactory listenerContainerFactory,
                                                  MessageRecoverer messageRecoverer,
-                                                 QueueNameResolver queueNameResolver) {
+                                                 DestinationNameResolver destinationNameResolver) {
         this.listenerContainerFactory = listenerContainerFactory;
         this.messageRecoverer = messageRecoverer;
-        this.queueNameResolver = queueNameResolver;
+        this.destinationNameResolver = destinationNameResolver;
     }
 
-    public JmsMessageDrivenChannelAdapter build(String group,
+    public JmsMessageDrivenChannelAdapter build(Queue group,
                                                 final ConsumerProperties properties) {
         return new JmsMessageDrivenChannelAdapter(
-                    listenerContainerFactory.build(queueNameResolver.resolveQueueNameForInputGroup(group,
-                            properties)),
+                    listenerContainerFactory.build(group),
                     // the listener is the channel adapter. it connects the JMS endpoint to the input
                     // channel by converting the messages that the listener container passes to it
                     new ChannelPublishingJmsMessageListener() {

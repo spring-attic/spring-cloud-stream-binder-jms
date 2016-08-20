@@ -16,26 +16,24 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import java.util.Collection;
 import java.util.Map;
 
 import org.junit.Test;
 
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.utils.QueueNameResolver;
 
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 /**
  * @author José Carlos Valero
  * @since 1.1
  */
-public class QueueNameResolverTest {
+public class DestinationNameResolverTest {
 
-    private QueueNameResolver target = new QueueNameResolver();
+    private DestinationNameResolver target = new DestinationNameResolver();
 
     @Test
     public void resolveNameForConsumer_whenNotPartitioned_returnsRawGroup() throws Exception {
@@ -64,9 +62,10 @@ public class QueueNameResolverTest {
         properties.setPartitionCount(1);
         properties.setRequiredGroups("requiredGroup1","requiredGroup2");
 
-        Map<String, String[]> names = target.resolveQueueNameForRequiredGroups("topic", properties);
+        Collection<DestinationNames> names = target.resolveTopicAndQueueNameForRequiredGroups("topic", properties);
 
-        assertThat(names, hasEntry("topic", new String[]{"requiredGroup1","requiredGroup2"}));
+        assertThat(names, hasSize(1));
+        assertThat(names, contains(new DestinationNames("topic", new String[]{"requiredGroup1", "requiredGroup2"})));
     }
 
     @Test
@@ -76,10 +75,11 @@ public class QueueNameResolverTest {
         properties.setPartitionKeyExtractorClass(Object.class); // Irrelevant at this point, yet necessary
         properties.setRequiredGroups("requiredGroup1","requiredGroup2");
 
-        Map<String, String[]> names = target.resolveQueueNameForRequiredGroups("topic", properties);
+        Collection<DestinationNames> names = target.resolveTopicAndQueueNameForRequiredGroups("topic", properties);
 
-        assertThat(names.entrySet(), hasSize(2));
-        assertThat(names, hasEntry("topic-0", new String[]{"requiredGroup1-0","requiredGroup2-0"}));
-        assertThat(names, hasEntry("topic-1", new String[]{"requiredGroup1-1","requiredGroup2-1"}));
+        assertThat(names, hasSize(2));
+        assertThat(names, contains(
+                new DestinationNames("topic-0", new String[]{"requiredGroup1-0", "requiredGroup2-0"}, 0),
+                new DestinationNames("topic-1", new String[]{"requiredGroup1-1", "requiredGroup2-1"}, 1)));
     }
 }

@@ -17,6 +17,7 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Queue;
 
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
@@ -36,9 +37,9 @@ public class ListenerContainerFactory {
         this.factory = factory;
     }
 
-    public AbstractMessageListenerContainer build(String name) {
+    public AbstractMessageListenerContainer build(Queue group) {
         AbstractMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
-        listenerContainer.setDestinationName(name);
+        listenerContainer.setDestination(group);
         listenerContainer.setPubSubDomain(false);
         listenerContainer.setConnectionFactory(factory);
         listenerContainer.setSessionTransacted(true); //Maybe configurable?

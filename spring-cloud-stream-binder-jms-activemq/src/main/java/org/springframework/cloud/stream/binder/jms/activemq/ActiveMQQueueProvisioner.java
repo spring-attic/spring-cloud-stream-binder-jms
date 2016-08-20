@@ -24,13 +24,13 @@ public class ActiveMQQueueProvisioner implements QueueProvisioner{
         Connection activeMQConnection;
         Session session;
         Topic topic = null;
-        Destination[] groups = null;
+        Queue[] groups = null;
         try {
             activeMQConnection = connectionFactory.createConnection();
             session = activeMQConnection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
             topic = session.createTopic(String.format("VirtualTopic.%s", topicName));
             if (ArrayUtils.isNotEmpty(consumerGroupName)) {
-                groups = new Destination[consumerGroupName.length];
+                groups = new Queue[consumerGroupName.length];
                 for (int i = 0; i < consumerGroupName.length; i++) {
                     groups[i] = createQueue(topicName, session, consumerGroupName[i]);
                 }

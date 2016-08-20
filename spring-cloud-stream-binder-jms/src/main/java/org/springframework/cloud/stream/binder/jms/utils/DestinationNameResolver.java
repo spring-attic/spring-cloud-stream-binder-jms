@@ -16,9 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import org.springframework.cloud.stream.binder.ConsumerProperties;
@@ -30,7 +28,7 @@ import org.springframework.cloud.stream.binder.ProducerProperties;
  * @author José Carlos Valero
  * @since 1.1
  */
-public class QueueNameResolver {
+public class DestinationNameResolver {
 
     public String resolveQueueNameForInputGroup(String group,
                                                 ConsumerProperties properties) {
@@ -38,19 +36,19 @@ public class QueueNameResolver {
                 group) : group;
     }
 
-    public Map<String, String[]> resolveQueueNameForRequiredGroups(String topic,
-                                                                   ProducerProperties properties) {
-        Map<String, String[]> output = new HashMap<>(properties.getPartitionCount());
+    public Collection<DestinationNames> resolveTopicAndQueueNameForRequiredGroups(String topic,
+                                                                                  ProducerProperties properties) {
+        Collection<DestinationNames> output = new ArrayList<>(properties.getPartitionCount());
         if (properties.isPartitioned()) {
             IntStream.range(0, properties.getPartitionCount()).forEach(index -> {
                 String[] requiredPartitionGroupNames = Arrays.stream(properties.getRequiredGroups())
                         .map(group -> buildName(index, group))
                         .toArray(size -> new String[size]);
                 String topicName = buildName(index, topic);
-                output.put(topicName, requiredPartitionGroupNames);
+                output.add(new DestinationNames(topicName, requiredPartitionGroupNames, index));
             });
         }else {
-            output.put(topic, properties.getRequiredGroups());
+            output.add(new DestinationNames(topic, properties.getRequiredGroups()));
         }
         return output;
     }

@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms;
 
+import java.util.Collection;
 import java.util.Map;
 import javax.jms.JMSException;
 import javax.jms.Queue;
@@ -27,9 +28,7 @@ import org.springframework.cloud.stream.binder.AbstractMessageChannelBinder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
-import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
-import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
-import org.springframework.cloud.stream.binder.jms.utils.QueueNameResolver;
+import org.springframework.cloud.stream.binder.jms.utils.*;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
 import org.springframework.messaging.MessageHandler;
 
@@ -42,49 +41,56 @@ import org.springframework.messaging.MessageHandler;
  * @author José Carlos Valero
  * @since 1.1
  */
-public class JMSMessageChannelBinder extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties, Queue> {
+public class JMSMessageChannelBinder extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties, Queue, TopicPartitionRegistrar> {
     protected final Log logger = LogFactory.getLog(this.getClass());
     private final QueueProvisioner queueProvisioner;
-    private final QueueNameResolver queueNameResolver;
+    private final DestinationNameResolver destinationNameResolver;
+
     private JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
     private JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory;
 
     public JMSMessageChannelBinder(QueueProvisioner queueProvisioner,
-                                   QueueNameResolver queueNameResolver,
+                                   DestinationNameResolver destinationNameResolver,
                                    JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory,
                                    JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory
     ) throws JMSException {
         super(true, null);
-        this.queueNameResolver = queueNameResolver;
+        this.destinationNameResolver = destinationNameResolver;
         this.jmsSendingMessageHandlerFactory = jmsSendingMessageHandlerFactory;
         this.jmsMessageDrivenChannelAdapterFactory = jmsMessageDrivenChannelAdapterFactory;
         this.queueProvisioner = queueProvisioner;
     }
 
     @Override
-    protected void createProducerDestinationIfNecessary(String name,
+    protected TopicPartitionRegistrar createProducerDestinationIfNecessary(String name,
                                                         ProducerProperties properties) {
-        provisionQueuesAndTopics(name, properties);
+        TopicPartitionRegistrar topicPartitionRegistrar = new TopicPartitionRegistrar();
+        Collection<DestinationNames> topicAndQueueNames =
+                destinationNameResolver.resolveTopicAndQueueNameForRequiredGroups(name, properties);
+
+        QueueProvisioner.Destinations destinations;
+        for (DestinationNames destinationNames : topicAndQueueNames) {
+            destinations = queueProvisioner.provisionTopicAndConsumerGroup(destinationNames.getTopicName(), destinationNames.getGroupNames());
+            topicPartitionRegistrar.addDestination(destinationNames.getPartitionIndex(),destinations.getTopic());
+        }
+        return topicPartitionRegistrar;
     }
 
     @Override
     protected Queue createConsumerDestinationIfNecessary(String name,
                                                          String group,
                                                          ConsumerProperties properties) {
-        String groupName = queueNameResolver.resolveQueueNameForInputGroup(group, properties);
-        String topicName = queueNameResolver.resolveQueueNameForInputGroup(name, properties);
-        queueProvisioner.provisionTopicAndConsumerGroup(topicName, groupName);
-        //TODO: This reference will only be used in the create consumerEndpoint, so we can skip it for now as long as destination is not used in createConsumerEndpoint.
-        return null;
+        String groupName = destinationNameResolver.resolveQueueNameForInputGroup(group, properties);
+        String topicName = destinationNameResolver.resolveQueueNameForInputGroup(name, properties);
+        QueueProvisioner.Destinations destinations = queueProvisioner.provisionTopicAndConsumerGroup(topicName, groupName);
+        return destinations.getGroups()[0];
 
     }
 
     @Override
-    protected MessageHandler createProducerMessageHandler(String destination,
+    protected MessageHandler createProducerMessageHandler(TopicPartitionRegistrar destination,
                                                           ProducerProperties producerProperties) throws Exception {
-        return jmsSendingMessageHandlerFactory.build(
-                destination,
-                producerProperties);
+        return jmsSendingMessageHandlerFactory.build(destination);
     }
 
     @Override
@@ -96,19 +102,8 @@ public class JMSMessageChannelBinder extends AbstractMessageChannelBinder<Consum
 
 
         JmsMessageDrivenChannelAdapter jmsMessageDrivenChannelAdapter =
-                jmsMessageDrivenChannelAdapterFactory.build(group, properties);
+                jmsMessageDrivenChannelAdapterFactory.build(destination, properties);
         return jmsMessageDrivenChannelAdapter;
-    }
-
-    private void provisionQueuesAndTopics(String name,
-                                          ProducerProperties properties) {
-        Map<String, String[]> topicAndQueueNames =
-                queueNameResolver.resolveQueueNameForRequiredGroups(name, properties);
-
-        for (Map.Entry<String, String[]> entry : topicAndQueueNames.entrySet()) {
-            queueProvisioner.provisionTopicAndConsumerGroup(entry.getKey(),
-                    entry.getValue());
-        }
     }
 
 }

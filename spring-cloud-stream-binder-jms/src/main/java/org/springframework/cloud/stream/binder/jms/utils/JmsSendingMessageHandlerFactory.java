@@ -40,13 +40,11 @@ public class JmsSendingMessageHandlerFactory {
         this.beanFactory = beanFactory;
     }
 
-    public JmsSendingMessageHandler build(String name,
-                                          ProducerProperties producerProperties) {
+    public PartitionAwareJmsSendingMessageHandler build(TopicPartitionRegistrar destinations) {
         template.setPubSubDomain(true);
-        JmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(
+        PartitionAwareJmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(
                 this.template,
-                producerProperties);
-        handler.setDestinationName(name);
+                destinations);
         handler.setBeanFactory(beanFactory);
         handler.afterPropertiesSet();
 

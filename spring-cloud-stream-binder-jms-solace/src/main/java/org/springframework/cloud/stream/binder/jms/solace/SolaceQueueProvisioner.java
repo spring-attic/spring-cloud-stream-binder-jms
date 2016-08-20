@@ -17,11 +17,18 @@
 package org.springframework.cloud.stream.binder.jms.solace;
 
 import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.Queue;
+import com.solacesystems.jcsmp.Topic;
 import com.solacesystems.jcsmp.impl.DurableTopicEndpointImpl;
+import com.solacesystems.jms.SolJmsUtility;
 import org.apache.commons.lang.ArrayUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.util.StreamUtils;
+
+import javax.jms.*;
 
 /**
  * {@link QueueProvisioner} for Solace.
@@ -35,27 +42,42 @@ import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigura
 public class SolaceQueueProvisioner implements QueueProvisioner {
     private static final String DMQ_NAME = "#DEAD_MSG_QUEUE";
     private final SessionFactory sessionFactory;
+    private final ConnectionFactory connectionFactory;
 
     private SolaceConfigurationProperties solaceConfigurationProperties;
 
-    public SolaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) {
+    public SolaceQueueProvisioner(SolaceConfigurationProperties solaceConfigurationProperties) throws Exception {
         this.solaceConfigurationProperties = solaceConfigurationProperties;
         this.sessionFactory = new SessionFactory(solaceConfigurationProperties);
+        this.connectionFactory = SolJmsUtility.createConnectionFactory(
+                solaceConfigurationProperties.getHost(),
+                solaceConfigurationProperties.getUsername(),
+                solaceConfigurationProperties.getPassword(),
+                null,
+                null
+        );
     }
 
     @Override
     public Destinations provisionTopicAndConsumerGroup(String name, String... groups) {
-        if (ArrayUtils.isEmpty(groups)) return null;//TODO: return JMS Destinations
+        Destinations.Factory destinationsFactory = new Destinations.Factory();
 
         try {
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
             JCSMPSession session = sessionFactory.build();
+            javax.jms.Session jmsSession = connectionFactory.createConnection().createSession(false, 1);
 
             // Using Durable... because non-durable Solace TopicEndpoints don't have names
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
             session.provision(topicEndpoint, null, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
+            destinationsFactory.withTopic(jmsSession.createTopic(name));
+
+            if (ArrayUtils.isEmpty(groups)) {
+                return destinationsFactory.build();
+            }
 
             for (String group : groups) {
+                destinationsFactory.addGroup(jmsSession.createQueue(group));
                 doProvision(session, topic, group);
             }
 
@@ -66,7 +88,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return null;//TODO: return JMS Destinations
+        return destinationsFactory.build();
     }
 
     @Override
