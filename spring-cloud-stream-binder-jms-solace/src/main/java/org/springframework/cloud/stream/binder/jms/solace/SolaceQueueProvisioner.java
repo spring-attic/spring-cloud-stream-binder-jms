@@ -26,6 +26,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
+import org.springframework.jms.support.JmsUtils;
 import org.springframework.util.StreamUtils;
 
 import javax.jms.*;
@@ -65,7 +66,8 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
         try {
             Topic topic = JCSMPFactory.onlyInstance().createTopic(name);
             JCSMPSession session = sessionFactory.build();
-            javax.jms.Session jmsSession = connectionFactory.createConnection().createSession(false, 1);
+            Connection connection = connectionFactory.createConnection();
+            javax.jms.Session jmsSession = connection.createSession(false, 1);
 
             // Using Durable... because non-durable Solace TopicEndpoints don't have names
             TopicEndpoint topicEndpoint = new DurableTopicEndpointImpl(name);
@@ -81,6 +83,9 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
                 doProvision(session, topic, group);
             }
 
+            JmsUtils.commitIfNecessary(jmsSession);
+            JmsUtils.closeSession(jmsSession);
+            JmsUtils.closeConnection(connection);
         } catch (JCSMPErrorResponseException e) {
             if (JCSMPErrorResponseSubcodeEx.SUBSCRIPTION_ALREADY_PRESENT != e.getSubcodeEx()) {
                 throw new RuntimeException(e);

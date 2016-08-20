@@ -4,6 +4,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
+import org.springframework.jms.support.JmsUtils;
 
 import javax.jms.*;
 
@@ -36,9 +37,9 @@ public class ActiveMQQueueProvisioner implements QueueProvisioner{
                 }
             }
 
-
-            session.commit();
-            session.close();
+            JmsUtils.commitIfNecessary(session);
+            JmsUtils.closeSession(session);
+            JmsUtils.closeConnection(activeMQConnection;
         } catch (JMSException e) {
             e.printStackTrace();
         }
@@ -55,7 +56,24 @@ public class ActiveMQQueueProvisioner implements QueueProvisioner{
 
     @Override
     public String provisionDeadLetterQueue() {
-        return null;
+        Session session = null;
+        Connection connection = null;
+        try {
+            connection = connectionFactory.createConnection();
+            session = connection.createSession(true, 1);
+            session.createQueue(ACTIVE_MQ_DLQ);
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }finally {
+            try {
+                JmsUtils.commitIfNecessary(session);
+                JmsUtils.closeSession(session);
+                JmsUtils.closeConnection(connection);
+            } catch (JMSException e) {
+                e.printStackTrace();
+            }
+        }
+        return ACTIVE_MQ_DLQ;
     }
 
 }
