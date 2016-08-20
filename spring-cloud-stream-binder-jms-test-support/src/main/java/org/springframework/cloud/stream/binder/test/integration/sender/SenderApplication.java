@@ -14,10 +14,7 @@
  *  limitations under the License.
  */
 
-package org.springframework.cloud.stream.binder.jms.solace.integration.sender;
-
-import java.util.HashMap;
-import java.util.Map;
+package org.springframework.cloud.stream.binder.test.integration.sender;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -30,6 +27,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootApplication(exclude = {EmbeddedServletContainerAutoConfiguration.class, WebMvcAutoConfiguration.class})
 @EnableBinding(Source.class)

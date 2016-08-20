@@ -63,7 +63,7 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
             if (JCSMPErrorResponseSubcodeEx.SUBSCRIPTION_ALREADY_PRESENT != e.getSubcodeEx()) {
                 throw new RuntimeException(e);
             }
-        } catch (JCSMPException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return null;//TODO: return JMS Destinations
@@ -79,13 +79,13 @@ public class SolaceQueueProvisioner implements QueueProvisioner {
 
         try {
             sessionFactory.build().provision(deadMsgQueue, properties, JCSMPSession.FLAG_IGNORE_ALREADY_EXISTS);
-        } catch (JCSMPException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return DMQ_NAME;
     }
 
-    private void doProvision(JCSMPSession session, Topic topic, String group) throws JCSMPException {
+    private void doProvision(JCSMPSession session, Topic topic, String group) throws Exception {
         if (group != null) {
 
             Queue addedQueue = JCSMPFactory.onlyInstance().createQueue(group);

@@ -27,9 +27,12 @@ import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.impl.XMLContentMessageImpl;
 import com.solacesystems.jcsmp.transaction.TransactedSession;
 
+import com.solacesystems.jms.SolJmsUtility;
 import org.springframework.beans.factory.config.YamlMapFactoryBean;
 import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigurationProperties;
 import org.springframework.core.io.ClassPathResource;
+
+import javax.jms.ConnectionFactory;
 
 import static com.solacesystems.jcsmp.JCSMPSession.FLAG_IGNORE_DOES_NOT_EXIST;
 import static com.solacesystems.jcsmp.JCSMPSession.WAIT_FOR_CONFIRM;
@@ -61,6 +64,18 @@ public class SolaceTestUtils {
         solaceConfigurationProperties.setHost(solacePropertyMap.get("host"));
 
         return solaceConfigurationProperties;
+    }
+
+    public static ConnectionFactory createConnectionFactory() throws Exception {
+        SolaceConfigurationProperties solaceProperties = getSolaceProperties();
+        ConnectionFactory cf = SolJmsUtility.createConnectionFactory(
+                solaceProperties.getHost(),
+                solaceProperties.getUsername(),
+                solaceProperties.getPassword(),
+                null,
+                null
+                );
+        return cf;
     }
 
     public static JCSMPSession createSession() {
@@ -96,50 +111,6 @@ public class SolaceTestUtils {
 
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static void waitFor(Runnable assertion) {
-        waitFor(1000, assertion);
-    }
-
-    public static void waitFor(int millis, Runnable assertion) {
-        long endTime = System.currentTimeMillis() + millis;
-
-        while (true) {
-            try {
-                assertion.run();
-                return;
-            } catch (AssertionError e) {
-                if (System.currentTimeMillis() > endTime) {
-                    throw e;
-                }
-            }
-            try {
-                Thread.sleep(millis / 10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private static void waitForItToWork(int millis, Runnable assertion) {
-        long endTime = System.currentTimeMillis() + millis;
-
-        while (true) {
-            try {
-                assertion.run();
-                return;
-            } catch (Exception e) {
-                if (System.currentTimeMillis() > endTime) {
-                    throw e;
-                }
-            }
-            try {
-                Thread.sleep(millis / 10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 

@@ -1,0 +1,9 @@
+spring:
+  main:
+    web-environment: false
+
+  # Necessary for org.springframework.cloud.stream.binder.jms.integration testing multiple ApplicationContexts.
+  jmx:
+    enabled: false
+
+debug: false

@@ -30,3 +30,38 @@ to a reference to the root JMS configuration `JMSAutoConfiguration` an example o
 class can be found in the Solace implementation in `org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration`.
 1. A `spring.binders` file under `META-INF` defining the configuration entry point for your binder SPI, probably
 the class created in the previous point.
+
+#### Testing your new JMS provider
+
+Apart from your unit tests, or integration tests, the JMS binder provides a template that will check all core features
+of the SCS model, verifying that your implementation is indeed compatible, in order to enable these tests you just need
+to implement `org.springframework.cloud.stream.binder.test.integration.EndToEndIntegrationTests` from the
+`spring-cloud-stream-binder-jms-test-support` maven submodule. e.g.:
+```java
+public class EndToEndIntegrationTests extends org.springframework.cloud.stream.binder.test.integration.EndToEndIntegrationTests {
+    public EndToEndIntegrationTests() throws Exception {
+        super(
+                new SolaceQueueProvisioner(SolaceTestUtils.getSolaceProperties()),
+                SolaceTestUtils.createConnectionFactory()
+        );
+    }
+
+    @Override
+    protected void deprovisionDLQ() throws Exception {
+        SolaceTestUtils.deprovisionDLQ();
+    }
+}
+```
+
+You might encounter an exception preventing the WebApplicationContext from being created, make sure to include
+a yaml (or alternatively properties) file in your test resources including, at least:
+
+```yml
+spring:
+  main:
+    web-environment: false
+
+  # Necessary for org.springframework.cloud.stream.binder.jms.integration testing multiple ApplicationContexts.
+  jmx:
+    enabled: false
+```

@@ -42,6 +42,13 @@
             <systemPath>${project.basedir}/lib/sol-jms-7.1.2.248.jar</systemPath>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream-binder-jms-test-support</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 </project>
