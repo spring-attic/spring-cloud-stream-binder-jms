@@ -3,6 +3,13 @@ Spring Cloud Stream JMS Binder – Solace Support
 
 This module provides provisioning functionality as required by [spring-cloud-stream-binder-jms](../../../).
 
+### How it works
+
+Solace allows creating the SCS model by [subscribing queues to topics](http://dev.solacesystems.com/get-started/java-tutorials/topic-queue-mapping_java/).
+This capability is enabled by the proprietary Java API.
+
+### Compiling the module
+
 To be able to compile the module Solace Java and JMS API jars need to be 
 available. Maven is configured to look for them in the lib folder. 
 
