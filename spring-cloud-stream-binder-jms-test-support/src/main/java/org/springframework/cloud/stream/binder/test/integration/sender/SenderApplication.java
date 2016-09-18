@@ -53,12 +53,16 @@ public class SenderApplication {
         }
 
         public void send(Object something) {
-            send(something, new HashMap<>());
+            send(something, new HashMap<String, Object>());
         }
 
         public void send(Object something, Map<String, Object> headers) {
             MessageBuilder<Object> builder = MessageBuilder.withPayload(something);
-            headers.entrySet().forEach(s -> builder.setHeader(s.getKey(), s.getValue()));
+
+            for (Map.Entry<String, Object> entry : headers.entrySet()) {
+                builder.setHeader(entry.getKey(), entry.getValue());
+            }
+
             Message message = builder.build();
             source.output().send(message);
         }

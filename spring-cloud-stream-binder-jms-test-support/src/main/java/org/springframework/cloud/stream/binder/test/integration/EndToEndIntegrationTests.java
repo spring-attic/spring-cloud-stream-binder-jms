@@ -17,6 +17,8 @@
 package org.springframework.cloud.stream.binder.test.integration;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang.ArrayUtils;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,10 +42,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
@@ -92,7 +90,9 @@ public abstract class EndToEndIntegrationTests {
 
     @After
     public void stopProducerAndConsumers() throws Exception {
-        startedContexts.forEach(ConfigurableApplicationContext::stop);
+        for (ConfigurableApplicationContext startedContext : startedContexts) {
+            startedContext.stop();
+        }
         deprovisionDLQ();
     }
 
@@ -106,17 +106,22 @@ public abstract class EndToEndIntegrationTests {
         Receiver receiver = createReceiver(randomGroupArg1);
         Receiver receiver2 = createReceiver(randomGroupArg2);
 
-        Stream.of(MESSAGE_TEXTS).forEach(sender::send);
+        for (String messageText : MESSAGE_TEXTS) {
+            sender.send(messageText);
+        }
 
-        List<Message> otherReceivedMessages = receiver2.getHandledMessages();
-        List<Message> messages = receiver.getHandledMessages();
+        final List<Message> otherReceivedMessages = receiver2.getHandledMessages();
+        final List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> {
-            assertThat(messages, hasSize(4));
-            assertThat(otherReceivedMessages, hasSize(4));
-            assertThat(extractPayload(messages), containsInAnyOrder(MESSAGE_TEXTS));
-            assertThat(extractPayload(otherReceivedMessages),
-                    containsInAnyOrder(MESSAGE_TEXTS));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, hasSize(4));
+                assertThat(otherReceivedMessages, hasSize(4));
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(messages), containsInAnyOrder(MESSAGE_TEXTS));
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(otherReceivedMessages),
+                        containsInAnyOrder(MESSAGE_TEXTS));
+            }
         });
     }
 
@@ -132,7 +137,9 @@ public abstract class EndToEndIntegrationTests {
         receiver.setLatch(latch);
         receiver2.setLatch(latch);
 
-        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+        for (int i = 0; i < messageCount; i++) {
+            sender.send(i);
+        }
 
         boolean completed = latch.await(20, TimeUnit.SECONDS);
         assertThat("timed out waiting for all messages to arrive", completed, is(true));
@@ -140,8 +147,8 @@ public abstract class EndToEndIntegrationTests {
         List<Message> otherReceivedMessages = receiver2.getHandledMessages();
         List<Message> messages = receiver.getHandledMessages();
 
-        assertThat(otherReceivedMessages, iterableWithSize(lessThan(messageCount)));
-        assertThat(messages, iterableWithSize(lessThan(messageCount)));
+        assertThat(otherReceivedMessages.size(),  lessThan(messageCount));
+        assertThat(messages.size(), lessThan(messageCount));
     }
 
     @Test
@@ -149,16 +156,21 @@ public abstract class EndToEndIntegrationTests {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1);
 
-        sender.send(MESSAGE_TEXTS[1], ImmutableMap.of(HEADER_KEY, HEADER_VALUE));
+        sender.send(MESSAGE_TEXTS[1], ImmutableMap.<String, Object>of(HEADER_KEY, HEADER_VALUE));
 
-        List<Message> messages = receiver.getHandledMessages();
+        final List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> assertThat(messages, contains(
-                allOf(
-                        hasProperty("payload", is(MESSAGE_TEXTS[1])),
-                        hasProperty("headers", hasEntry(HEADER_KEY, HEADER_VALUE))
-                )
-        )));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, contains(
+                        allOf(
+                                hasProperty("payload", is(MESSAGE_TEXTS[1])),
+                                hasProperty("headers", hasEntry(HEADER_KEY, HEADER_VALUE))
+                        )
+                ));
+            }
+        });
     }
 
     @Test
@@ -169,11 +181,16 @@ public abstract class EndToEndIntegrationTests {
         sender.send(MESSAGE_TEXTS[2]);
 
         Receiver receiver = createReceiver(String.format(INPUT_GROUP_FORMAT, group42));
-        List<Message> messages = receiver.getHandledMessages();
+        final List<Message> messages = receiver.getHandledMessages();
 
 
-        waitFor(() -> assertThat(messages, hasSize(1)));
-        assertThat(extractPayload(messages), containsInAnyOrder(MESSAGE_TEXTS[2]));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, hasSize(1));
+            }
+        });
+        assertThat(extractStringPayload(messages), containsInAnyOrder(MESSAGE_TEXTS[2]));
 
     }
 
@@ -203,16 +220,19 @@ public abstract class EndToEndIntegrationTests {
 
         sender.send(Receiver.EXCEPTION_REQUEST);
 
-        List<Message> receivedMessages = receiver.getReceivedMessages();
-        List<Message> handledMessages = receiver.getHandledMessages();
+        final List<Message> receivedMessages = receiver.getReceivedMessages();
+        final List<Message> handledMessages = receiver.getHandledMessages();
 
-        waitFor(1000, () -> {
-            assertThat(receivedMessages, hasSize(3));
-            assertThat(handledMessages, empty());
-            assertThat(extractPayload(receivedMessages),
-                    contains(Receiver.EXCEPTION_REQUEST,
-                            Receiver.EXCEPTION_REQUEST,
-                            Receiver.EXCEPTION_REQUEST));
+        waitFor(1000, new Runnable() {
+            @Override
+            public void run() {
+                assertThat(receivedMessages, hasSize(3));
+                assertThat(handledMessages, empty());
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(receivedMessages),
+                        contains(Receiver.EXCEPTION_REQUEST,
+                                Receiver.EXCEPTION_REQUEST,
+                                Receiver.EXCEPTION_REQUEST));
+            }
         });
 
         javax.jms.Message message = jmsTemplate.receive(queueProvisioner.provisionDeadLetterQueue());
@@ -256,19 +276,23 @@ public abstract class EndToEndIntegrationTests {
         );
 
         int messageCount = 39;
-        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+        for (int i = 0; i < messageCount; i++) {
+            sender.send(i);
+        }
+        final List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
+        final List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
 
-        List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
-        List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messagesPartition1, hasSize(3));
+                List<String> objects = EndToEndIntegrationTests.this.extractStringPayload(messagesPartition1);
+                assertThat(objects, hasItems("0", "13", "26"));
 
-        waitFor(() -> {
-            assertThat(messagesPartition1, hasSize(3));
-            List<String> objects = extractStringPayload(messagesPartition1);
-            assertThat(objects, hasItems("0", "13", "26"));
-
-            assertThat(messagesPartition0, hasSize(36));
-            assertThat(extractStringPayload(messagesPartition0),
-                    allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
+                assertThat(messagesPartition0, hasSize(36));
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(messagesPartition0),
+                        allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
+            }
         });
     }
 
@@ -283,7 +307,9 @@ public abstract class EndToEndIntegrationTests {
         );
 
         int messageCount = 39;
-        IntStream.range(0, messageCount).mapToObj(String::valueOf).forEach(sender::send);
+        for (int i = 0; i < messageCount; i++) {
+            sender.send(i);
+        }
 
         Receiver receiverPartition0 = createReceiver(
                 String.format(INPUT_GROUP_FORMAT, group66),
@@ -298,17 +324,20 @@ public abstract class EndToEndIntegrationTests {
                 String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
         );
 
-        List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
-        List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
+        final List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
+        final List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
 
-        waitFor(() -> {
-            assertThat(messagesPartition1, hasSize(3));
-            List<String> objects = extractStringPayload(messagesPartition1);
-            assertThat(objects, hasItems("0", "13", "26"));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messagesPartition1, hasSize(3));
+                List<String> objects = EndToEndIntegrationTests.this.extractStringPayload(messagesPartition1);
+                assertThat(objects, hasItems("0", "13", "26"));
 
-            assertThat(messagesPartition0, hasSize(36));
-            assertThat(extractStringPayload(messagesPartition0),
-                    allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
+                assertThat(messagesPartition0, hasSize(36));
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(messagesPartition0),
+                        allOf(hasItems("1", "2", "38"), not(hasItem("13"))));
+            }
         });
     }
 
@@ -317,14 +346,18 @@ public abstract class EndToEndIntegrationTests {
         Sender sender = createSender();
         Receiver receiver = createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 
-        SerializableTest serializableTest = new SerializableTest("some value");
+        final SerializableTest serializableTest = new SerializableTest("some value");
         sender.send(serializableTest);
 
-        List<Message> messages = receiver.getHandledMessages();
+        final List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> {
-            assertThat(messages, hasSize(1));
-            assertThat(extractPayload(messages), containsInAnyOrder(serializableTest));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, hasSize(1));
+                Iterable<SerializableTest> actual = (Iterable<SerializableTest>) EndToEndIntegrationTests.this.extractPayload(messages);
+                assertThat(actual, containsInAnyOrder(serializableTest));
+            }
         });
     }
 
@@ -335,11 +368,14 @@ public abstract class EndToEndIntegrationTests {
 
         sender.send(11);
 
-        List<Message> messages = receiver.getHandledMessages();
+        final List<Message> messages = receiver.getHandledMessages();
 
-        waitFor(() -> {
-            assertThat(messages, hasSize(1));
-            assertThat(extractPayload(messages), containsInAnyOrder(11));
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, hasSize(1));
+                assertThat((Iterable<Integer>) EndToEndIntegrationTests.this.extractPayload(messages), containsInAnyOrder(11));
+            }
         });
     }
 
@@ -364,19 +400,27 @@ public abstract class EndToEndIntegrationTests {
     }
 
     private String[] applicationArguments(String destinationArg, String[] arguments) {
-        return Stream.concat(Arrays.stream(arguments), Stream.of(
+        return (String[]) ArrayUtils.addAll(arguments, new String[]{
                 destinationArg,
                 "--logging.level.org.springframework=WARN",
                 "--logging.level.org.springframework.boot=WARN"
-        )).toArray(String[]::new);
+        });
     }
 
     private List<String> extractStringPayload(Iterable<Message> messages) {
-        return extractPayload(messages).stream().map(Object::toString).collect(Collectors.toList());
+        List<String> output = new ArrayList<>();
+        for(Object o : extractPayload(messages)){
+            output.add(o.toString());
+        }
+        return output;
     }
 
-    private List<?> extractPayload(Iterable<Message> messages) {
-        return StreamSupport.stream(messages.spliterator(), false).map(Message::getPayload).collect(Collectors.toList());
+    private Iterable<?> extractPayload(Iterable<Message> messages) {
+        List<Object> output = new ArrayList<>();
+        for (Message message : messages) {
+            output.add(message.getPayload());
+        }
+        return output;
     }
 
     private String getRandomName(String prefix) {

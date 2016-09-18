@@ -21,6 +21,7 @@ import org.junit.Test;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 
 import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
 import javax.jms.Queue;
 
 import static org.hamcrest.Matchers.is;
@@ -38,9 +39,9 @@ public class ListenerContainerFactoryTest {
         Queue queue = mock(Queue.class);
         AbstractMessageListenerContainer messageListenerContainer = listenerContainerFactory.build(queue);
 
-        assertThat(messageListenerContainer.getDestination(), Is.is(queue));
+        assertThat(messageListenerContainer.getDestination(), Is.<Destination>is(queue));
         assertThat(messageListenerContainer.getConnectionFactory(), Is.is(factory));
-        assertThat(getField(messageListenerContainer, "pubSubDomain"), Is.is(false));
+        assertThat(getField(messageListenerContainer, "pubSubDomain"), Is.<Object>is(false));
         assertThat("Transacted is not true. Transacted is required for guaranteed deliveries. " +
                         "In particular, some implementation will require it so they can eventually route the message to the DLQ",
                 messageListenerContainer.isSessionTransacted(), is(true));

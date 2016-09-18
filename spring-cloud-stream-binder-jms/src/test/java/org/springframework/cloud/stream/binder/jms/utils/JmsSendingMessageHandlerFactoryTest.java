@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.jms.core.JmsTemplate;
@@ -42,14 +43,14 @@ public class JmsSendingMessageHandlerFactoryTest {
     public void build_createsAHandlerWithTheProvidedParameters() throws Exception {
         PartitionAwareJmsSendingMessageHandler handler = target.build(TOPIC_PARTITION_REGISTRAR);
 
-        assertThat(ReflectionTestUtils.getField(handler, "jmsTemplate"), is(jmsTemplate));
+        assertThat(ReflectionTestUtils.getField(handler, "jmsTemplate"), Matchers.<Object>is(jmsTemplate));
     }
 
     @Test
     public void build_configuresTheHandlerWithDestinationAndBeanFactory() throws Exception {
         PartitionAwareJmsSendingMessageHandler handler = target.build(TOPIC_PARTITION_REGISTRAR);
 
-        assertThat(ReflectionTestUtils.getField(handler, "destinations"), is(TOPIC_PARTITION_REGISTRAR));
-        assertThat(ReflectionTestUtils.getField(handler, "beanFactory"), is(beanFactory));
+        assertThat(ReflectionTestUtils.getField(handler, "destinations"), Matchers.<Object>is(TOPIC_PARTITION_REGISTRAR));
+        assertThat(ReflectionTestUtils.getField(handler, "beanFactory"), Matchers.<Object>is(beanFactory));
     }
 }

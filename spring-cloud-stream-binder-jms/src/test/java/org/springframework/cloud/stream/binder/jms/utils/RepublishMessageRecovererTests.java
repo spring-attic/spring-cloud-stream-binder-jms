@@ -17,7 +17,9 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -122,7 +124,7 @@ public class RepublishMessageRecovererTests {
         target.recover(message, cause);
 
         Object deadLetter = jmsTemplate.receiveAndConvert(DEAD_LETTER_QUEUE);
-        assertThat(deadLetter, is("Amazing payload"));
+        assertThat(deadLetter, Matchers.<Object>is("Amazing payload"));
     }
 
     @Test
@@ -138,13 +140,14 @@ public class RepublishMessageRecovererTests {
             @Override
             public Message createMessage(Session session) throws JMSException {
                 TextMessage textMessage = session.createTextMessage("Amazing payload");
-                headers.forEach((key, value) -> {
+                ImmutableSet<Map.Entry<String, String>> entries = headers.entrySet();
+                for(Map.Entry<String, String> entry : entries){
                     try {
-                        textMessage.setStringProperty(key, value);
+                        textMessage.setStringProperty(entry.getKey(), entry.getValue());
                     } catch (JMSException e) {
                         throw new RuntimeException(e);
                     }
-                });
+                }
                 return textMessage;
             }
         });

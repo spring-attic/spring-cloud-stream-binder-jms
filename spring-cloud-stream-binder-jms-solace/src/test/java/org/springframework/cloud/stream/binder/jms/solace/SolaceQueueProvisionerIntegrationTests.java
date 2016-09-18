@@ -19,6 +19,7 @@ package org.springframework.cloud.stream.binder.jms.solace;
 import com.google.common.collect.Iterables;
 import com.solacesystems.jcsmp.*;
 import com.solacesystems.jcsmp.transaction.TransactedSession;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,9 +29,7 @@ import org.springframework.cloud.stream.binder.jms.solace.config.SolaceConfigura
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
 
-import static org.hamcrest.Matchers.*;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.stream.binder.jms.solace.SolaceTestUtils.DLQ_NAME;
@@ -72,7 +71,7 @@ public class SolaceQueueProvisionerIntegrationTests {
         countingListener.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT));
+        assertThat(countingListener.getPayloads(), Matchers.contains(TEXT_CONTENT));
     }
 
     /**
@@ -114,10 +113,10 @@ public class SolaceQueueProvisionerIntegrationTests {
         countingListener2.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT));
+        assertThat(countingListener.getPayloads(), Matchers.contains(TEXT_CONTENT));
 
         assertThat(countingListener2.getErrors(), empty());
-        assertThat(countingListener2.getPayloads(), contains(TEXT_CONTENT));
+        assertThat(countingListener2.getPayloads(), Matchers.contains(TEXT_CONTENT));
     }
 
     @Test
@@ -126,16 +125,14 @@ public class SolaceQueueProvisionerIntegrationTests {
         String consumerGroupName = getRandomName("consumerGroup");
         solaceQueueProvisioner.provisionTopicAndConsumerGroup(topic.getName(), consumerGroupName);
 
-        IntStream.range(0, numberOfMessages)
-                .mapToObj(String::valueOf)
-                .map(this::createMessage)
-                .forEach(m -> {
-                    try {
-                        messageProducer.send(m, topic);
-                    } catch (JCSMPException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+        for (int i = 0; i < numberOfMessages; i++) {
+            BytesXMLMessage message = this.createMessage(String.valueOf(i));
+            try {
+                messageProducer.send(message, topic);
+            } catch (JCSMPException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         ConsumerFlowProperties consumerFlowProperties = createConsumerFlowProperties(
                 consumerGroupName);
@@ -158,10 +155,10 @@ public class SolaceQueueProvisionerIntegrationTests {
         assertThat(countingListener.getErrors(), empty());
         assertThat(countingListener2.getErrors(), empty());
 
-        assertThat("We missed some messages!", Iterables.concat(countingListener.getPayloads(), countingListener2.getPayloads()), iterableWithSize(numberOfMessages));
+        assertThat("We missed some messages!", Iterables.concat(countingListener.getPayloads(), countingListener2.getPayloads()), Matchers.<String>iterableWithSize(numberOfMessages));
 
-        assertThat("listener one got all the messages!", countingListener.getPayloads(), iterableWithSize(lessThan(numberOfMessages)));
-        assertThat("listener two got all the messages!", countingListener2.getPayloads(), iterableWithSize(lessThan(numberOfMessages)));
+        assertThat("listener one got all the messages!", countingListener.getPayloads(), Matchers.<String>iterableWithSize(Matchers.lessThan(numberOfMessages)));
+        assertThat("listener two got all the messages!", countingListener2.getPayloads(), Matchers.<String>iterableWithSize(Matchers.lessThan(numberOfMessages)));
     }
 
     @Test
@@ -184,11 +181,11 @@ public class SolaceQueueProvisionerIntegrationTests {
         countingListener2.awaitExpectedMessages();
 
         assertThat(countingListener.getErrors(), empty());
-        assertThat(countingListener.getPayloads(), contains(TEXT_CONTENT,
+        assertThat(countingListener.getPayloads(), Matchers.contains(TEXT_CONTENT,
                 MORE_TEXT_CONTENT));
 
         assertThat(countingListener2.getErrors(), empty());
-        assertThat(countingListener2.getPayloads(), contains(MORE_TEXT_CONTENT));
+        assertThat(countingListener2.getPayloads(), Matchers.contains(MORE_TEXT_CONTENT));
     }
 
     @Test
@@ -210,8 +207,8 @@ public class SolaceQueueProvisionerIntegrationTests {
         CountingListener countingListener = listenToQueue(DLQ_NAME);
 
         countingListener.awaitExpectedMessages();
-        assertThat(rollbackListener.getReceivedMessageCount(), is(maxRetries + 1));
-        assertThat(countingListener.getPayloads().get(0), is(TEXT_CONTENT));
+        assertThat(rollbackListener.getReceivedMessageCount(), Matchers.is(maxRetries + 1));
+        assertThat(countingListener.getPayloads().get(0), Matchers.is(TEXT_CONTENT));
     }
 
     @Test
@@ -223,9 +220,9 @@ public class SolaceQueueProvisionerIntegrationTests {
         CountingListener countingListener = listenToQueue(DLQ_NAME);
         countingListener.awaitExpectedMessages();
 
-        assertThat(countingListener.getPayloads().size(), is(1));
-        assertThat(countingListener.getPayloads().get(0), is(TEXT_CONTENT));
-        assertThat(deadLetterQueue, is(DLQ_NAME));
+        assertThat(countingListener.getPayloads().size(), Matchers.is(1));
+        assertThat(countingListener.getPayloads().get(0), Matchers.is(TEXT_CONTENT));
+        assertThat(deadLetterQueue, Matchers.is(DLQ_NAME));
     }
 
     private CountingListener listenToQueue(String queueName) throws JCSMPException {

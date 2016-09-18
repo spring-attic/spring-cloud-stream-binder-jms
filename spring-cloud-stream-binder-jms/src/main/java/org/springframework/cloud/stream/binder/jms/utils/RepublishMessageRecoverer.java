@@ -22,6 +22,7 @@ import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessagePostProcessor;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.SimpleMessageConverter;
 import org.springframework.messaging.MessageHeaders;
@@ -67,7 +68,7 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
     public void recover(Message undeliveredMessage, Throwable cause) {
         String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
 
-        JmsHeaderMapper mapper = new DefaultJmsHeaderMapper();
+        final JmsHeaderMapper mapper = new DefaultJmsHeaderMapper();
         MessageConverter converter = new SimpleMessageConverter();
         Object payload = null;
 
@@ -77,7 +78,7 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
             logger.error("The message payload could not be retrieved. It will be lost.", e);
         }
 
-        Map<String, Object> headers = mapper.toHeaders(undeliveredMessage);
+        final Map<String, Object> headers = mapper.toHeaders(undeliveredMessage);
         headers.put(X_EXCEPTION_STACKTRACE, getStackTraceAsString(cause));
         headers.put(X_EXCEPTION_MESSAGE, cause.getCause() != null ? cause.getCause().getMessage() : cause.getMessage());
         try {
@@ -90,9 +91,12 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
             headers.putAll(additionalHeaders);
         }
 
-        jmsTemplate.convertAndSend(deadLetterQueueName, payload, message -> {
-            mapper.fromHeaders(new MessageHeaders(headers), message);
-            return message;
+        jmsTemplate.convertAndSend(deadLetterQueueName, payload, new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws JMSException {
+                mapper.fromHeaders(new MessageHeaders(headers), message);
+                return message;
+            }
         });
 
     }

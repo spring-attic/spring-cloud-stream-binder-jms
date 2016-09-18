@@ -42,16 +42,19 @@ public class DestinationNameResolver {
                                                                                   ProducerProperties properties) {
         Collection<DestinationNames> output = new ArrayList<>(properties.getPartitionCount());
         if (properties.isPartitioned()) {
-            IntStream.range(0, properties.getPartitionCount()).forEach(index -> {
-                String[] requiredPartitionGroupNames = Arrays.stream(properties.getRequiredGroups())
-                        .map(group -> buildName(index, group))
-                        .toArray(size -> new String[size]);
+            String[] requiredGroups = properties.getRequiredGroups();
+            for (int index = 0; index < properties.getPartitionCount(); index++) {
+                String[] requiredPartitionGroupNames = new String[properties.getRequiredGroups().length];
+                for (int j = 0; j < requiredGroups.length; j++) {
+                    requiredPartitionGroupNames[j] = buildName(index, requiredGroups[j]);
+                }
                 String topicName = buildName(index, topic);
                 output.add(new DestinationNames(topicName, requiredPartitionGroupNames, index));
-            });
+            }
         }else {
             output.add(new DestinationNames(topic, properties.getRequiredGroups()));
         }
+
         return output;
     }
 
