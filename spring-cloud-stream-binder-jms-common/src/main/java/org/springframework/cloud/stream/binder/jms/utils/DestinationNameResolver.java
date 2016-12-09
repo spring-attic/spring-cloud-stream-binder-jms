@@ -16,50 +16,62 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.stream.IntStream;
+import org.springframework.util.StringUtils;
 
 /**
  * Component responsible of building up the name of a specific queue given some context
  *
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 public class DestinationNameResolver {
 
-    public String resolveQueueNameForInputGroup(String group,
-                                                ConsumerProperties properties) {
-        return properties.isPartitioned() ? buildName(properties.getInstanceIndex(),
-                group) : group;
-    }
+	private AnonymousNamingStrategy namingStrategy;
 
-    public Collection<DestinationNames> resolveTopicAndQueueNameForRequiredGroups(String topic,
-                                                                                  ProducerProperties properties) {
-        Collection<DestinationNames> output = new ArrayList<>(properties.getPartitionCount());
-        if (properties.isPartitioned()) {
-            String[] requiredGroups = properties.getRequiredGroups();
-            for (int index = 0; index < properties.getPartitionCount(); index++) {
-                String[] requiredPartitionGroupNames = new String[properties.getRequiredGroups().length];
-                for (int j = 0; j < requiredGroups.length; j++) {
-                    requiredPartitionGroupNames[j] = buildName(index, requiredGroups[j]);
-                }
-                String topicName = buildName(index, topic);
-                output.add(new DestinationNames(topicName, requiredPartitionGroupNames, index));
-            }
-        }else {
-            output.add(new DestinationNames(topic, properties.getRequiredGroups()));
-        }
+	public DestinationNameResolver(AnonymousNamingStrategy namingStrategy) {
+		this.namingStrategy = namingStrategy;
+	}
 
-        return output;
-    }
+	public String resolveQueueNameForInputGroup(String group,
+			ConsumerProperties properties) {
+		boolean anonymous = !StringUtils.hasText(group);
+		String baseQueueName = anonymous ? namingStrategy.generateName() : group;
+		return properties.isPartitioned()
+				? buildName(properties.getInstanceIndex(), baseQueueName) : baseQueueName;
+	}
 
-    private String buildName(int index, String group) {
-        return String.format("%s-%s", group, index);
-    }
+	public Collection<DestinationNames> resolveTopicAndQueueNameForRequiredGroups(
+			String topic, ProducerProperties properties) {
+		Collection<DestinationNames> output = new ArrayList<>(
+				properties.getPartitionCount());
+		if (properties.isPartitioned()) {
+			String[] requiredGroups = properties.getRequiredGroups();
+			for (int index = 0; index < properties.getPartitionCount(); index++) {
+				String[] requiredPartitionGroupNames = new String[properties
+						.getRequiredGroups().length];
+				for (int j = 0; j < requiredGroups.length; j++) {
+					requiredPartitionGroupNames[j] = buildName(index, requiredGroups[j]);
+				}
+				String topicName = buildName(index, topic);
+				output.add(new DestinationNames(topicName, requiredPartitionGroupNames,
+						index));
+			}
+		}
+		else {
+			output.add(new DestinationNames(topic, properties.getRequiredGroups()));
+		}
+
+		return output;
+	}
+
+	private String buildName(int index, String group) {
+		return String.format("%s-%s", group, index);
+	}
 
 }

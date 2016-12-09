@@ -33,6 +33,7 @@ import org.mockito.Mockito;
 
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
+import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
@@ -65,7 +66,7 @@ public class RepublishMessageRecovererTests {
 
         jmsTemplate = new JmsTemplate(connectionFactory);
         jmsTemplate.setDefaultDestinationName("my-fancy-queue");
-        target = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate);
+        target = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
         additionalHeadersTarget = new AdditionalHeadersMessageRecoverer(queueProvisioner, jmsTemplate);
     }
 
@@ -163,7 +164,7 @@ public class RepublishMessageRecovererTests {
 
     private static class AdditionalHeadersMessageRecoverer extends RepublishMessageRecoverer {
         public AdditionalHeadersMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
-            super(queueProvisioner, jmsTemplate);
+            super(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
         }
 
         @Override

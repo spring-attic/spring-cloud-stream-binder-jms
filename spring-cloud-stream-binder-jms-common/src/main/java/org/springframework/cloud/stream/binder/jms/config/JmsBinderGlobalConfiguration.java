@@ -19,12 +19,14 @@ package org.springframework.cloud.stream.binder.jms.config;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.codec.Codec;
+import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 
 import javax.jms.ConnectionFactory;
@@ -37,9 +39,11 @@ import javax.jms.ConnectionFactory;
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 @Configuration
+@EnableConfigurationProperties(JmsBinderConfigurationProperties.class)
 public class JmsBinderGlobalConfiguration {
 
     @Autowired
@@ -47,30 +51,32 @@ public class JmsBinderGlobalConfiguration {
 
     @Bean
     public DestinationNameResolver queueNameResolver() throws Exception {
-        return new DestinationNameResolver();
+        return new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."));
     }
 
+    @Bean
     @ConditionalOnMissingBean(MessageRecoverer.class)
-    @Bean
     MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner) throws Exception {
-        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate());
+        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate(), new DefaultJmsHeaderMapper());
     }
 
     @Bean
-    public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(MessageRecoverer messageRecoverer) throws Exception {
-        return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory(),
+    ListenerContainerFactory listenerContainerFactory(JmsBinderConfigurationProperties configurationProperties) throws Exception {
+        return new ListenerContainerFactory(configurationProperties, connectionFactory);
+    }
+
+    @Bean
+    public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(MessageRecoverer messageRecoverer,
+                                                                                       ListenerContainerFactory listenerContainerFactory) throws Exception {
+        return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory,
                 messageRecoverer,
                 queueNameResolver());
     }
 
     @Bean
-    ListenerContainerFactory listenerContainerFactory() throws Exception {
-        return new ListenerContainerFactory(connectionFactory);
-    }
-
-    @Bean
+    @ConditionalOnMissingBean(JmsSendingMessageHandlerFactory.class)
     public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory(BeanFactory beanFactory) throws Exception {
-        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory);
+        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory, new DefaultJmsHeaderMapper());
     }
 
     @Bean

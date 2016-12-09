@@ -1,0 +1,10 @@
+mq8:
+  container_name: local-mq8
+  build: .
+  ports:
+    - "1414:1414"
+  environment:
+    - LICENSE=accept
+    - MQ_QMGR_NAME=LOCAL.DOCKER.QMGR
+  volumes:
+    - /mnt/sda1/mqm:/var/mqm

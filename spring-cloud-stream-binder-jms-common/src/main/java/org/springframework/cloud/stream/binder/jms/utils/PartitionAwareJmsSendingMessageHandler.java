@@ -18,7 +18,6 @@ package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.integration.handler.AbstractMessageHandler;
-import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
@@ -38,6 +37,7 @@ import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HE
  * partition.
  *
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandler implements Lifecycle {
@@ -45,12 +45,14 @@ public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandl
 
     private JmsTemplate jmsTemplate;
     private final TopicPartitionRegistrar destinations;
-    private volatile JmsHeaderMapper headerMapper = new DefaultJmsHeaderMapper();
+    private final JmsHeaderMapper headerMapper;
 
     public PartitionAwareJmsSendingMessageHandler(JmsTemplate jmsTemplate,
-                                                  TopicPartitionRegistrar destinations) {
+                                                  TopicPartitionRegistrar destinations,
+                                                  JmsHeaderMapper headerMapper) {
         this.jmsTemplate = jmsTemplate;
         this.destinations = destinations;
+        this.headerMapper = headerMapper;
     }
 
     protected void handleMessageInternal(Message<?> message) throws Exception {

@@ -19,10 +19,10 @@ package org.springframework.cloud.stream.binder.jms.utils;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -35,7 +35,7 @@ public class JmsSendingMessageHandlerFactoryTest {
     public static final TopicPartitionRegistrar TOPIC_PARTITION_REGISTRAR = new TopicPartitionRegistrar();
     JmsTemplate jmsTemplate = mock(JmsTemplate.class);
     BeanFactory beanFactory = mock(BeanFactory.class);
-    private JmsSendingMessageHandlerFactory target = new JmsSendingMessageHandlerFactory(jmsTemplate,beanFactory);
+    private JmsSendingMessageHandlerFactory target = new JmsSendingMessageHandlerFactory(jmsTemplate,beanFactory, new DefaultJmsHeaderMapper());
 
     //Not too sure about these tests, but can't find a better way of actually testing a factory without interacting with the subproduct.
 

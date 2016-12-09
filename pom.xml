@@ -9,13 +9,6 @@
     <packaging>pom</packaging>
     <version>1.0.0.BUILD-SNAPSHOT</version>
 
-    <modules>
-        <module>spring-cloud-stream-binder-jms-common</module>
-        <module>spring-cloud-stream-binder-jms-common-test-support</module>
-        <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
-        <module>spring-cloud-stream-binder-jms-activemq</module>
-    </modules>
-
     <parent>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-build</artifactId>
@@ -71,4 +64,47 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>all</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>spring-cloud-stream-binder-jms-common-test-support</module>
+                <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
+                <module>spring-cloud-stream-binder-jms-common</module>
+                <module>spring-cloud-stream-binder-jms-activemq</module>
+                <module>spring-cloud-stream-binder-jms-ibmmq</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>solace</id>
+            <modules>
+                <module>spring-cloud-stream-binder-jms-common-test-support</module>
+                <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
+                <module>spring-cloud-stream-binder-jms-common</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>activemq</id>
+            <modules>
+                <module>spring-cloud-stream-binder-jms-common-test-support</module>
+                <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
+                <module>spring-cloud-stream-binder-jms-common</module>
+                <module>spring-cloud-stream-binder-jms-activemq</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>ibmmq</id>
+            <modules>
+                <module>spring-cloud-stream-binder-jms-common-test-support</module>
+                <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
+                <module>spring-cloud-stream-binder-jms-common</module>
+                <module>spring-cloud-stream-binder-jms-ibmmq</module>
+            </modules>
+        </profile>
+    </profiles>
+
 </project>
