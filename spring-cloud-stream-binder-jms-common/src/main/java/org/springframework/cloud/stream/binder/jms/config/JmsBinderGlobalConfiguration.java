@@ -37,6 +37,7 @@ import javax.jms.ConnectionFactory;
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 @Configuration
@@ -47,20 +48,13 @@ public class JmsBinderGlobalConfiguration {
 
     @Bean
     public DestinationNameResolver queueNameResolver() throws Exception {
-        return new DestinationNameResolver();
+        return new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."));
     }
 
+    @Bean
     @ConditionalOnMissingBean(MessageRecoverer.class)
-    @Bean
     MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner) throws Exception {
-        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate());
-    }
-
-    @Bean
-    public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(MessageRecoverer messageRecoverer) throws Exception {
-        return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory(),
-                messageRecoverer,
-                queueNameResolver());
+        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate(), new SpecCompliantJmsHeaderMapper());
     }
 
     @Bean
@@ -69,8 +63,17 @@ public class JmsBinderGlobalConfiguration {
     }
 
     @Bean
+    public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(MessageRecoverer messageRecoverer,
+                                                                                       ListenerContainerFactory listenerContainerFactory) throws Exception {
+        return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory,
+                messageRecoverer,
+                queueNameResolver());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(JmsSendingMessageHandlerFactory.class)
     public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory(BeanFactory beanFactory) throws Exception {
-        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory);
+        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory, new SpecCompliantJmsHeaderMapper());
     }
 
     @Bean

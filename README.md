@@ -9,7 +9,7 @@ There is a Pivotal Tracker® project [publicly available](https://www.pivotaltra
 
 This binder is currently in alpha, bugs are expected.
 
-JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and 
+JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and
 publish-subscribe messaging using [`Topic`](https://docs.oracle.com/javaee/6/api/javax/jms/Topic.html). However, neither of these patterns
 maps fully onto the SCS model of [persistent publish-subscribe with consumer groups](http://docs.spring.io/spring-cloud-stream/docs/current/reference/htmlsingle/#_persistent_publish_subscribe_support)
 
@@ -20,16 +20,18 @@ The `Binder` therefore delegates provisioning this to a broker-specific `QueuePr
 
 For more details, see the documentation for the individual broker support sub-modules.
 
-- [**Solace**](spring-cloud-stream-binder-jms-solace)
+- [**Solace**](https://github.com/spring-cloud/spring-cloud-stream-binder-solace)
 - [**ActiveMQ**](spring-cloud-stream-binder-jms-activemq)
+- [**IBM&reg; MQ&reg;**](https://github.com/spring-cloud/spring-cloud-stream-binder-ibm-mq)
 
 ### Provided implementations
 
 Together with the root SPI the Spring Cloud Stream JMS module provides an implementation
 for:
- 
+
 1. [Solace](http://www.solacesystems.com/products/jms-messaging) based on the Java proprietary Solace API.
 2. [ActiveMQ](http://activemq.apache.org/) based on Virtual Destinations, a JMS compatible feature following certain naming conventions.
+3. [IBM&reg; MQ&reg;](http://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](http://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM&reg; MQ&reg; installation.
 
 ### Implementing new JMS providers
 
@@ -50,7 +52,7 @@ class can be found in the Solace implementation in `org.springframework.cloud.st
 the class created in the previous point.
 
 It might be a good starting point checking out the existing implementations
-e.g. [Solace](spring-cloud-stream-binder-jms-solace) or [ActiveMQ](spring-cloud-stream-binder-jms-activemq).
+e.g. [Solace](https://github.com/spring-cloud/spring-cloud-stream-binder-solace) or [ActiveMQ](spring-cloud-stream-binder-jms-activemq).
 
 #### Testing your new JMS provider
 

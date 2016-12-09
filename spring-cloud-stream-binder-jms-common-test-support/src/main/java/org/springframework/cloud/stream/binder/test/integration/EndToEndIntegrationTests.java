@@ -51,32 +51,32 @@ import static org.springframework.cloud.stream.binder.test.TestUtils.waitFor;
 
 public abstract class EndToEndIntegrationTests {
 
-    private static final String[] MESSAGE_TEXTS = {
+    private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
+    private String destination;
+
+    protected static final String[] MESSAGE_TEXTS = {
             "first message test content",
             "second message text content",
             "third message text content",
             "fourth message text content"
     };
-    private static final String HEADER_KEY = "some-custom-header-key";
-    private static final String HEADER_VALUE = "some-custom-header-value";
-    private static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
-    private static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
-    private static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
-    private static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
-    private static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
-    private static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
-    public static final String REQUIRED_GROUPS_FORMAT = "--spring.cloud.stream.bindings.output.producer.requiredGroups=%s";
-    private final JmsTemplate jmsTemplate;
-    private List<ConfigurableApplicationContext> startedContexts = new ArrayList<>();
-    private String destination;
-    private String randomGroupArg1;
-    private String randomGroupArg2;
-    private final QueueProvisioner queueProvisioner;
-    private final ConnectionFactory connectionFactory;
+    protected static final String HEADER_KEY = "some_custom_header_key";
+    protected static final String HEADER_VALUE = "some-custom-header-value";
+    protected static final String INVALID_HEADER_KEY = "some-invalid-custom-header-key";
+    protected static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
+    protected static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
+    protected static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
+    protected static final String MAX_ATTEMPTS_1 = "--spring.cloud.stream.bindings.input.consumer.maxAttempts=1";
+    protected static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
+    protected static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
+    protected static final String REQUIRED_GROUPS_FORMAT = "--spring.cloud.stream.bindings.output.producer.requiredGroups=%s";
+    protected final JmsTemplate jmsTemplate;
+    protected final QueueProvisioner queueProvisioner;
+    protected String randomGroupArg1;
+    protected String randomGroupArg2;
 
     protected EndToEndIntegrationTests(QueueProvisioner queueProvisioner, ConnectionFactory connectionFactory) {
         this.queueProvisioner = queueProvisioner;
-        this.connectionFactory = connectionFactory;
         this.jmsTemplate = new JmsTemplate(connectionFactory);
     }
 
@@ -98,6 +98,30 @@ public abstract class EndToEndIntegrationTests {
 
     protected void deprovisionDLQ() throws Exception {
         return;
+    }
+
+    /**
+     * Deals with scenarios where Stream apps are started with only default values.
+     * Which includes 'null' consumer groups.
+     */
+    @Test
+    public void scs_whenNoConsumerGroups_appsReceiveMessage() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver();
+
+        for (String messageText : MESSAGE_TEXTS) {
+            sender.send(messageText);
+        }
+
+        final List<Message> messages = receiver.getHandledMessages();
+
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, hasSize(4));
+                assertThat(EndToEndIntegrationTests.this.extractStringPayload(messages), containsInAnyOrder(MESSAGE_TEXTS));
+            }
+        });
     }
 
     @Test
@@ -167,6 +191,28 @@ public abstract class EndToEndIntegrationTests {
                         allOf(
                                 hasProperty("payload", is(MESSAGE_TEXTS[1])),
                                 hasProperty("headers", hasEntry(HEADER_KEY, HEADER_VALUE))
+                        )
+                ));
+            }
+        });
+    }
+
+    @Test
+    public void scs_whenHeadersContainingIllegalCharactersAreSpecified_headersAreRewrittenAndPassedThrough() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+
+        sender.send(MESSAGE_TEXTS[1], ImmutableMap.<String, Object>of(INVALID_HEADER_KEY, HEADER_VALUE));
+
+        final List<Message> messages = receiver.getHandledMessages();
+
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, contains(
+                        allOf(
+                                hasProperty("payload", is(MESSAGE_TEXTS[1])),
+                                hasProperty("headers", hasEntry(INVALID_HEADER_KEY.replaceAll("-", "_"), HEADER_VALUE))
                         )
                 ));
             }
@@ -379,7 +425,7 @@ public abstract class EndToEndIntegrationTests {
         });
     }
 
-    private Sender createSender(String... arguments) {
+    protected Sender createSender(String... arguments) {
         ConfigurableApplicationContext context = new SpringApplicationBuilder(SenderApplication.class)
                 .bannerMode(Banner.Mode.OFF)
                 .build()
@@ -389,7 +435,7 @@ public abstract class EndToEndIntegrationTests {
         return context.getBean(Sender.class);
     }
 
-    private Receiver createReceiver(String... arguments) {
+    protected Receiver createReceiver(String... arguments) {
         ConfigurableApplicationContext context = new SpringApplicationBuilder(ReceiverApplication.class)
                 .bannerMode(Banner.Mode.OFF)
                 .build()
