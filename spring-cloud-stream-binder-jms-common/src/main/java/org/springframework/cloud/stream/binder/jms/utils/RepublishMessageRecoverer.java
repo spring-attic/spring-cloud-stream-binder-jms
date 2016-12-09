@@ -19,7 +19,6 @@ package org.springframework.cloud.stream.binder.jms.utils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
-import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
@@ -49,26 +48,26 @@ import java.util.Map;
  */
 public class RepublishMessageRecoverer implements MessageRecoverer {
 
-    public static final String X_EXCEPTION_MESSAGE = "x-exception-message";
-    public static final String X_ORIGINAL_QUEUE = "x-original-queue";
-    public static final String X_EXCEPTION_STACKTRACE = "x-exception-stacktrace";
+    public static final String X_EXCEPTION_MESSAGE = "x_exception_message";
+    public static final String X_ORIGINAL_QUEUE = "x_original_queue";
+    public static final String X_EXCEPTION_STACKTRACE = "x_exception_stacktrace";
 
     private final Log logger = LogFactory.getLog(getClass());
 
     private final JmsTemplate jmsTemplate;
     private final QueueProvisioner queueProvisioner;
+    private final JmsHeaderMapper mapper;
 
-    public RepublishMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
+    public RepublishMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate, JmsHeaderMapper mapper) {
         this.jmsTemplate = jmsTemplate;
         this.queueProvisioner = queueProvisioner;
+        this.mapper = mapper;
     }
-
 
     @Override
     public void recover(Message undeliveredMessage, Throwable cause) {
         String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
 
-        final JmsHeaderMapper mapper = new DefaultJmsHeaderMapper();
         MessageConverter converter = new SimpleMessageConverter();
         Object payload = null;
 
