@@ -1,10 +1,10 @@
-# Starting a local IBM MQ 8 instance
+# Starting a local IBM&reg; MQ&reg; 8 instance
 
-Follow these steps to run a local MQ instance using Docker. 
+Follow these steps to run a local MQ&reg; instance using Docker.
 
 ## Using Docker Machine
 
-Install [Docker Toolbox](https://www.docker.com/products/docker-toolbox) 
+Install [Docker Toolbox](https://www.docker.com/products/docker-toolbox)
 and verify that you have started a Docker VM using the VirtualBox driver:
 
 ```console
@@ -31,7 +31,7 @@ Next, point your docker client to the active Docker VM with:
 $ eval $(docker-machine env default)
 ```
 
-Use the following connection details with your JMS/MQ management tool of choice 
+Use the following connection details with your JMS/MQ management tool of choice
 or the following configuration properties in a Spring Cloud Stream app:
 
 | Name          | Value                         | Configuration Property Example
@@ -42,4 +42,3 @@ or the following configuration properties in a Spring Cloud Stream app:
 | Channel       | PASSWORD.SVRCONN              | ibmmq.channel=PASSWORD.SVRCONN            |
 | Username      | mq                            | ibmmq.username=mq                         |
 | Password      | mq                            | ibmmq.password=mq                         |
-

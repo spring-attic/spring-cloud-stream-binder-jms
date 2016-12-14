@@ -1,6 +1,8 @@
-# Spring Cloud Stream JMS Binder – IBM MQ Support
+# Spring Cloud Stream JMS Binder – IBM&reg; MQ&reg; Support
 
-This module provides provisioning functionality for IBM MQ 8.x+ as required by [spring-cloud-stream-binder-jms](../../../).
+This module provides provisioning functionality for IBM&reg; MQ&reg; 8.x+ as required by [spring-cloud-stream-binder-jms](../../../).
+
+*IBM&reg; and MQ&reg; are registered trademarks of International Business Machines Corporation.*
 
 ## How it works
 
@@ -21,22 +23,22 @@ catered for in upcoming updates.*
 
 ## Versions tested
 
-Currently only IBM MQ version 8.x has been tested.
+Currently only IBM&reg; MQ&reg; version 8.x has been tested.
 
 ## Local test environment
 
-One option to test the binder locally is to use the 
-IBM MQ for Developers Docker image available on [Docker Hub](https://hub.docker.com/r/ibmcom/mq/).
+One option to test the binder locally is to use the
+IBM&reg; MQ&reg; for Developers Docker image available on [Docker Hub](https://hub.docker.com/r/ibmcom/mq/).
 
 Included in this project is a `docker-compose.yml` file to build, configure and run a local
 Queue Manager instance. See the [`README.md`](src/etc/docker/v8/README.md) for details.
 
 ## Compiling the module
 
-As the MQ Java libraries are proprietry licensed software, you must install the 
+As the MQ Java libraries are proprietry licensed software, you must install the
 libraries into your configured Maven repository (local and/or remote).
 
-From your IBM MQ installation directory under `java/lib`, install/add the following two libraries:
+From your IBM&reg; MQ&reg; installation directory under `java/lib`, install/add the following two libraries:
 
 * `com.ibm.mq.allclient.jar`
 * `com.ibm.mq.pcf.jar`
@@ -45,14 +47,14 @@ Below is an example of [installing](https://maven.apache.org/guides/mini/guide-3
 the two libraries into your local Maven repository:
 
 ```console
-$ mvn install:install-file 
+$ mvn install:install-file
   -Dfile=<path-to-file>/com.ibm.mq.allclient.jar \
   -DgroupId=com.ibm \
   -DartifactId=com.ibm.mq.allclient \
   -Dversion=<version> \
   -Dpackaging=jar
-  
-$ mvn install:install-file 
+
+$ mvn install:install-file
   -Dfile=<path-to-file>/com.ibm.mq.pcf.jar \
   -DgroupId=com.ibm \
   -DartifactId=com.ibm.mq.pcf \
@@ -60,7 +62,7 @@ $ mvn install:install-file
   -Dpackaging=jar  
 ```
 
-Now compile the IBM MQ binder with:
+Now compile the IBM&reg; MQ&reg; binder with:
 
 ```console
 $ mvn -P ibmmq clean compile
@@ -68,7 +70,7 @@ $ mvn -P ibmmq clean compile
 
 ## Running integration tests
 
-Make sure you have an IBM MQ Queue Manager instance running.
+Make sure you have an IBM&reg; MQ&reg; Queue Manager instance running.
 If you are running the MQ Docker container via the [included `docker-compose.yml`](src/etc/docker/v8/README.md),
 you can run all the integration tests as is, with:
 
@@ -84,6 +86,6 @@ If no consumer group (`spring.cloud.stream.bindings.input.group` / `spring.cloud
 is provided, an anonymous group is generated. The corresponding
 topic, subscription and queue provisioned will not be removed at any point.
 If you run many apps without a specific consumer group set, you will
-incur many orphaned anonymous objects. 
+incur many orphaned anonymous objects.
 
 **These objects must be cleaned up manually.**

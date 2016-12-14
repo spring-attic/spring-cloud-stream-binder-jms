@@ -22,7 +22,7 @@ For more details, see the documentation for the individual broker support sub-mo
 
 - [**Solace**](spring-cloud-stream-binder-jms-solace)
 - [**ActiveMQ**](spring-cloud-stream-binder-jms-activemq)
-- [**IBM MQ**](spring-cloud-stream-binder-jms-ibmmq)
+- [**IBM&reg; MQ&reg;**](spring-cloud-stream-binder-jms-ibmmq)
 
 ### Provided implementations
 
@@ -31,7 +31,7 @@ for:
 
 1. [Solace](http://www.solacesystems.com/products/jms-messaging) based on the Java proprietary Solace API.
 2. [ActiveMQ](http://activemq.apache.org/) based on Virtual Destinations, a JMS compatible feature following certain naming conventions.
-3. [IBM MQ](http://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](http://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM MQ installation.
+3. [IBM&reg; MQ&reg;](http://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](http://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM&reg; MQ&reg; installation.
 
 ### Implementing new JMS providers
 
@@ -99,9 +99,9 @@ For this reason, build profiles are available for the following:
 * `all` - build all modules (active by default)
 * [`solace`](spring-cloud-stream-binder-jms-solace) - build only the Solace binder as well as prerequisite modules
 * [`activemq`](spring-cloud-stream-binder-jms-activemq) - build only the ActiveMQ binder as well as prerequisite modules
-* [`ibmmq`](spring-cloud-stream-binder-jms-ibmmq) - build only the IBM MQ binder as well as prerequisite modules
+* [`ibmmq`](spring-cloud-stream-binder-jms-ibmmq) - build only the IBM&reg; MQ&reg; binder as well as prerequisite modules
 
-For example, to build the IBM MQ binder only, you would use the `ibmmq` Maven profile:
+For example, to build the IBM&reg; MQ&reg; binder only, you would use the `ibmmq` Maven profile:
 
 ```console
 $ ./mvnw -P ibmmq install
