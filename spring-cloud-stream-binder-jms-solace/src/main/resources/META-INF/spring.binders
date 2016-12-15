@@ -1,2 +1,0 @@
-solace:\
-org.springframework.cloud.stream.binder.jms.solace.config.SolaceJmsConfiguration

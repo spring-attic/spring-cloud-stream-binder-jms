@@ -10,10 +10,9 @@
     <version>1.0.0.BUILD-SNAPSHOT</version>
 
     <modules>
-        <module>spring-cloud-stream-binder-jms-test-support</module>
+        <module>spring-cloud-stream-binder-jms-common</module>
+        <module>spring-cloud-stream-binder-jms-common-test-support</module>
         <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
-        <module>spring-cloud-stream-binder-jms</module>
-        <module>spring-cloud-stream-binder-jms-solace</module>
         <module>spring-cloud-stream-binder-jms-activemq</module>
     </modules>
 
@@ -72,6 +71,4 @@
             </plugin>
         </plugins>
     </build>
-
-
 </project>
