@@ -27,11 +27,12 @@ import static org.junit.Assert.assertThat;
 
 /**
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 public class DestinationNameResolverTest {
 
-    private DestinationNameResolver target = new DestinationNameResolver();
+    private DestinationNameResolver target = new DestinationNameResolver(new Base64UrlNamingStrategy());
 
     @Test
     public void resolveNameForConsumer_whenNotPartitioned_returnsRawGroup() throws Exception {

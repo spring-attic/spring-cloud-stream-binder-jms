@@ -17,30 +17,36 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 
 /**
  * Factory to create JMS message handlers
  *
  * @author José Carlos Valero
+ * @author Donovan Muller
  * @since 1.1
  */
 public class JmsSendingMessageHandlerFactory {
 
     private final JmsTemplate template;
     private final BeanFactory beanFactory;
+    private JmsHeaderMapper headerMapper;
 
     public JmsSendingMessageHandlerFactory(JmsTemplate template,
-                                           BeanFactory beanFactory) {
+                                           BeanFactory beanFactory,
+                                           JmsHeaderMapper headerMapper) {
         this.template = template;
         this.beanFactory = beanFactory;
+        this.headerMapper = headerMapper;
     }
 
     public PartitionAwareJmsSendingMessageHandler build(TopicPartitionRegistrar destinations) {
         template.setPubSubDomain(true);
         PartitionAwareJmsSendingMessageHandler handler = new PartitionAwareJmsSendingMessageHandler(
                 this.template,
-                destinations);
+                destinations,
+                headerMapper);
         handler.setBeanFactory(beanFactory);
         handler.afterPropertiesSet();
 

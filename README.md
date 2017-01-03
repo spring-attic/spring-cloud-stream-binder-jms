@@ -9,7 +9,7 @@ There is a Pivotal Tracker® project [publicly available](https://www.pivotaltra
 
 This binder is currently in alpha, bugs are expected.
 
-JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and 
+JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and
 publish-subscribe messaging using [`Topic`](https://docs.oracle.com/javaee/6/api/javax/jms/Topic.html). However, neither of these patterns
 maps fully onto the SCS model of [persistent publish-subscribe with consumer groups](http://docs.spring.io/spring-cloud-stream/docs/current/reference/htmlsingle/#_persistent_publish_subscribe_support)
 
@@ -22,14 +22,16 @@ For more details, see the documentation for the individual broker support sub-mo
 
 - [**Solace**](spring-cloud-stream-binder-jms-solace)
 - [**ActiveMQ**](spring-cloud-stream-binder-jms-activemq)
+- [**IBM&reg; MQ&reg;**](spring-cloud-stream-binder-jms-ibmmq)
 
 ### Provided implementations
 
 Together with the root SPI the Spring Cloud Stream JMS module provides an implementation
 for:
- 
+
 1. [Solace](http://www.solacesystems.com/products/jms-messaging) based on the Java proprietary Solace API.
 2. [ActiveMQ](http://activemq.apache.org/) based on Virtual Destinations, a JMS compatible feature following certain naming conventions.
+3. [IBM&reg; MQ&reg;](http://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](http://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM&reg; MQ&reg; installation.
 
 ### Implementing new JMS providers
 
@@ -86,3 +88,21 @@ spring:
 Depending on your technology it might be easier or more difficult to set up the infrastructure,
 if possible embedded, self-contained servers are preferred as in ActiveMQ, but this is not always possible
 as in Solace. Due to technical or legal reasons.
+
+#### Build profiles
+
+It is not always possible or desirable to source proprietary libraries for certain binder implementations (Solace, IBM MQ, etc.).
+However, without the libraries installed and resolvable from the modules, the project will not build as expected.
+
+For this reason, build profiles are available for the following:
+
+* `all` - build all modules (active by default)
+* [`solace`](spring-cloud-stream-binder-jms-solace) - build only the Solace binder as well as prerequisite modules
+* [`activemq`](spring-cloud-stream-binder-jms-activemq) - build only the ActiveMQ binder as well as prerequisite modules
+* [`ibmmq`](spring-cloud-stream-binder-jms-ibmmq) - build only the IBM&reg; MQ&reg; binder as well as prerequisite modules
+
+For example, to build the IBM&reg; MQ&reg; binder only, you would use the `ibmmq` Maven profile:
+
+```console
+$ ./mvnw -P ibmmq install
+```
