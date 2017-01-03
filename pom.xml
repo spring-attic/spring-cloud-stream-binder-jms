@@ -80,14 +80,6 @@
             </modules>
         </profile>
         <profile>
-            <id>solace</id>
-            <modules>
-                <module>spring-cloud-stream-binder-jms-common-test-support</module>
-                <module>spring-cloud-stream-binder-jms-activemq-test-support</module>
-                <module>spring-cloud-stream-binder-jms-common</module>
-            </modules>
-        </profile>
-        <profile>
             <id>activemq</id>
             <modules>
                 <module>spring-cloud-stream-binder-jms-common-test-support</module>

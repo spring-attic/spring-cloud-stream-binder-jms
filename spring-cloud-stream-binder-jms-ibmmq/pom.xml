@@ -12,13 +12,14 @@
     <artifactId>spring-cloud-stream-binder-jms-ibmmq</artifactId>
 
     <properties>
+        <!-- Version from ibmcom/mq:8 Docker image -->
         <ibm.mq.version>8.0.0.4</ibm.mq.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-jms</artifactId>
+            <artifactId>spring-cloud-stream-binder-jms-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -42,7 +43,7 @@
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-jms-test-support</artifactId>
+            <artifactId>spring-cloud-stream-binder-jms-common-test-support</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
