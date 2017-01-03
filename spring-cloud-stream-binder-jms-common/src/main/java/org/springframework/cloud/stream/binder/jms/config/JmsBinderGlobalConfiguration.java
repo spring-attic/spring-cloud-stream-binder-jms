@@ -26,7 +26,6 @@ import org.springframework.cloud.stream.binder.jms.utils.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.codec.Codec;
-import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 
 import javax.jms.ConnectionFactory;
@@ -57,7 +56,7 @@ public class JmsBinderGlobalConfiguration {
     @Bean
     @ConditionalOnMissingBean(MessageRecoverer.class)
     MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner) throws Exception {
-        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate(), new DefaultJmsHeaderMapper());
+        return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate(), new SpecCompliantJmsHeaderMapper());
     }
 
     @Bean
@@ -76,7 +75,7 @@ public class JmsBinderGlobalConfiguration {
     @Bean
     @ConditionalOnMissingBean(JmsSendingMessageHandlerFactory.class)
     public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory(BeanFactory beanFactory) throws Exception {
-        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory, new DefaultJmsHeaderMapper());
+        return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory, new SpecCompliantJmsHeaderMapper());
     }
 
     @Bean

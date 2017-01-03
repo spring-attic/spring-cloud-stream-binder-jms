@@ -1,2 +1,0 @@
-ibmmq:\
-org.springframework.cloud.stream.binder.jms.ibmmq.config.IBMMQJmsConfiguration

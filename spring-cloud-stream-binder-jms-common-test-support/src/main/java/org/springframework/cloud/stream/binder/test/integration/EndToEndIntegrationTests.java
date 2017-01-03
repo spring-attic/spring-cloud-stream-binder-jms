@@ -60,8 +60,9 @@ public abstract class EndToEndIntegrationTests {
             "third message text content",
             "fourth message text content"
     };
-    protected static final String HEADER_KEY = "some-custom-header-key";
+    protected static final String HEADER_KEY = "some_custom_header_key";
     protected static final String HEADER_VALUE = "some-custom-header-value";
+    protected static final String INVALID_HEADER_KEY = "some-invalid-custom-header-key";
     protected static final String OUTPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.output.destination=%s";
     protected static final String INPUT_DESTINATION_FORMAT = "--spring.cloud.stream.bindings.input.destination=%s";
     protected static final String INPUT_GROUP_FORMAT = "--spring.cloud.stream.bindings.input.group=%s";
@@ -190,6 +191,28 @@ public abstract class EndToEndIntegrationTests {
                         allOf(
                                 hasProperty("payload", is(MESSAGE_TEXTS[1])),
                                 hasProperty("headers", hasEntry(HEADER_KEY, HEADER_VALUE))
+                        )
+                ));
+            }
+        });
+    }
+
+    @Test
+    public void scs_whenHeadersContainingIllegalCharactersAreSpecified_headersAreRewrittenAndPassedThrough() throws Exception {
+        Sender sender = createSender();
+        Receiver receiver = createReceiver(randomGroupArg1);
+
+        sender.send(MESSAGE_TEXTS[1], ImmutableMap.<String, Object>of(INVALID_HEADER_KEY, HEADER_VALUE));
+
+        final List<Message> messages = receiver.getHandledMessages();
+
+        waitFor(new Runnable() {
+            @Override
+            public void run() {
+                assertThat(messages, contains(
+                        allOf(
+                                hasProperty("payload", is(MESSAGE_TEXTS[1])),
+                                hasProperty("headers", hasEntry(INVALID_HEADER_KEY.replaceAll("-", "_"), HEADER_VALUE))
                         )
                 ));
             }
