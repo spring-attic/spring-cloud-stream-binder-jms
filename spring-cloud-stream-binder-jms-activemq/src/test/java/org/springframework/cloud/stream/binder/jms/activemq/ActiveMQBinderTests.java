@@ -22,7 +22,6 @@ import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
@@ -50,7 +49,7 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
 		JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(jmsTemplate, applicationContext.getBeanFactory(), new DefaultJmsHeaderMapper());
 		DestinationNameResolver destinationNameResolver = new DestinationNameResolver(new Base64UrlNamingStrategy());
-		ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(new JmsBinderConfigurationProperties(), connectionFactory);
+		ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(connectionFactory);
 		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
 		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer, destinationNameResolver);
 		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner, new DestinationNameResolver(new Base64UrlNamingStrategy()), jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory);

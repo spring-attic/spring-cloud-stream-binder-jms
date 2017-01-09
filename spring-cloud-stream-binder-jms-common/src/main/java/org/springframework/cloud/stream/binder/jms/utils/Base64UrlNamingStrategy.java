@@ -3,6 +3,7 @@ package org.springframework.cloud.stream.binder.jms.utils;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
+import org.springframework.util.Assert;
 import org.springframework.util.Base64Utils;
 
 /**
@@ -29,11 +30,13 @@ public class Base64UrlNamingStrategy implements AnonymousNamingStrategy {
 
     @Override
     public String generateName(String prefix) {
+        Assert.hasText(prefix, "Prefix cannot be zero-length");
+
         UUID uuid = UUID.randomUUID();
         ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
         bb.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
         // Convert to base64 and remove trailing =
         return prefix + Base64Utils.encodeToUrlSafeString(bb.array()).replaceAll("=", "")
-                .replaceAll("-", "");
+                .replaceAll("-", "$");
     }
 }

@@ -18,7 +18,6 @@ package org.springframework.cloud.stream.binder.jms.utils;
 
 import org.hamcrest.core.Is;
 import org.junit.Test;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 
 import javax.jms.ConnectionFactory;
@@ -35,9 +34,7 @@ public class ListenerContainerFactoryTest {
     @Test
     public void listenerContainerFactory_createsAndConfiguresMessageListenerContainer() throws Exception {
         ConnectionFactory factory = mock(ConnectionFactory.class);
-        ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(
-                new JmsBinderConfigurationProperties(),
-                factory);
+        ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(factory);
 
         Queue queue = mock(Queue.class);
         AbstractMessageListenerContainer messageListenerContainer = listenerContainerFactory.build(queue);

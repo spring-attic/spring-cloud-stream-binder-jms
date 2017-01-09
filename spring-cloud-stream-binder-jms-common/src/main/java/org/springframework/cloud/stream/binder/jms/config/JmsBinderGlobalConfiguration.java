@@ -19,7 +19,6 @@ package org.springframework.cloud.stream.binder.jms.config;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.*;
@@ -42,7 +41,6 @@ import javax.jms.ConnectionFactory;
  * @since 1.1
  */
 @Configuration
-@EnableConfigurationProperties(JmsBinderConfigurationProperties.class)
 public class JmsBinderGlobalConfiguration {
 
     @Autowired
@@ -60,8 +58,8 @@ public class JmsBinderGlobalConfiguration {
     }
 
     @Bean
-    ListenerContainerFactory listenerContainerFactory(JmsBinderConfigurationProperties configurationProperties) throws Exception {
-        return new ListenerContainerFactory(configurationProperties, connectionFactory);
+    ListenerContainerFactory listenerContainerFactory() throws Exception {
+        return new ListenerContainerFactory(connectionFactory);
     }
 
     @Bean

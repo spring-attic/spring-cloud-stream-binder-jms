@@ -16,7 +16,6 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
@@ -32,13 +31,9 @@ import javax.jms.Queue;
  */
 public class ListenerContainerFactory {
 
-    private JmsBinderConfigurationProperties configurationProperties;
-
     private ConnectionFactory factory;
 
-    public ListenerContainerFactory(JmsBinderConfigurationProperties configurationProperties,
-                                    ConnectionFactory factory) {
-        this.configurationProperties = configurationProperties;
+    public ListenerContainerFactory(ConnectionFactory factory) {
         this.factory = factory;
     }
 
@@ -47,7 +42,7 @@ public class ListenerContainerFactory {
         listenerContainer.setDestination(group);
         listenerContainer.setPubSubDomain(false);
         listenerContainer.setConnectionFactory(factory);
-        listenerContainer.setSessionTransacted(configurationProperties.isTransacted());
+        listenerContainer.setSessionTransacted(true);
         return listenerContainer;
     }
 }
