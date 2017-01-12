@@ -1,11 +1,15 @@
 package org.springframework.cloud.stream.binder.jms.activemq;
 
+import javax.jms.Connection;
+import javax.jms.JMSException;
+import javax.jms.Queue;
+import javax.jms.Session;
+import javax.jms.Topic;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.jms.support.JmsUtils;
-
-import javax.jms.*;
 
 /**
  * {@link QueueProvisioner} for ActiveMQ.
@@ -35,7 +39,12 @@ public class ActiveMQQueueProvisioner implements QueueProvisioner{
             if (ArrayUtils.isNotEmpty(consumerGroupName)) {
                 groups = new Queue[consumerGroupName.length];
                 for (int i = 0; i < consumerGroupName.length; i++) {
-                    groups[i] = createQueue(topicName, session, consumerGroupName[i]);
+                    /*
+                     * By default, ActiveMQ consumer queues are named 'Consumer.*.VirtualTopic.',
+                     * therefore we must remove '.' from the consumer group name if present.
+                     * For example, anonymous consumer groups are named 'anonymous.*' by default.
+                     */
+                    groups[i] = createQueue(topicName, session,	consumerGroupName[i].replaceAll("\\.", "_"));
                 }
             }
 

@@ -34,6 +34,7 @@ import org.mockito.Mockito;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
 
@@ -44,9 +45,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer.X_EXCEPTION_MESSAGE;
-import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE;
-import static org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer.X_ORIGINAL_QUEUE;
 
 public class RepublishMessageRecovererTests {
 
@@ -65,7 +63,7 @@ public class RepublishMessageRecovererTests {
 
         jmsTemplate = new JmsTemplate(connectionFactory);
         jmsTemplate.setDefaultDestinationName("my-fancy-queue");
-        target = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate);
+        target = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
         additionalHeadersTarget = new AdditionalHeadersMessageRecoverer(queueProvisioner, jmsTemplate);
     }
 
@@ -88,7 +86,7 @@ public class RepublishMessageRecovererTests {
         target.recover(message, cause);
         message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
-        assertThat(message.getStringProperty(X_EXCEPTION_STACKTRACE), containsString(exceptionMessage));
+        assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE), containsString(exceptionMessage));
     }
 
     @Test
@@ -98,7 +96,7 @@ public class RepublishMessageRecovererTests {
         target.recover(message, nestedCause);
         message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
-        assertThat(message.getStringProperty(X_EXCEPTION_MESSAGE), is(exceptionMessage));
+        assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_MESSAGE), is(exceptionMessage));
 
     }
 
@@ -107,7 +105,7 @@ public class RepublishMessageRecovererTests {
         target.recover(message, cause);
         message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
-        assertThat(message.getStringProperty(X_EXCEPTION_MESSAGE), is(exceptionMessage));
+        assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_MESSAGE), is(exceptionMessage));
     }
 
     @Test
@@ -115,7 +113,7 @@ public class RepublishMessageRecovererTests {
         target.recover(message, cause);
         message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
-        assertThat(message.getStringProperty(X_ORIGINAL_QUEUE), is("queue://my-fancy-queue"));
+        assertThat(message.getStringProperty(RepublishMessageRecoverer.X_ORIGINAL_QUEUE), is("queue://my-fancy-queue"));
     }
 
     @Test
@@ -163,7 +161,7 @@ public class RepublishMessageRecovererTests {
 
     private static class AdditionalHeadersMessageRecoverer extends RepublishMessageRecoverer {
         public AdditionalHeadersMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate) {
-            super(queueProvisioner, jmsTemplate);
+            super(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
         }
 
         @Override
