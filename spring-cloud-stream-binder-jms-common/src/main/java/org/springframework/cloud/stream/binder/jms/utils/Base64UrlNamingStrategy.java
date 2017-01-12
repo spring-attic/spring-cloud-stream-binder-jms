@@ -37,6 +37,6 @@ public class Base64UrlNamingStrategy implements AnonymousNamingStrategy {
         bb.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
         // Convert to base64 and remove trailing =
         return prefix + Base64Utils.encodeToUrlSafeString(bb.array()).replaceAll("=", "")
-                .replaceAll("-", "$");
+                .replaceAll("-", "\\$");
     }
 }
