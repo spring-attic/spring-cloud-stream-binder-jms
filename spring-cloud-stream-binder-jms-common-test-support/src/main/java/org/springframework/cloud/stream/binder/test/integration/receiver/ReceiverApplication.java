@@ -5,7 +5,7 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *		http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,46 +35,46 @@ import java.util.concurrent.CountDownLatch;
 @EnableBinding(Sink.class)
 public class ReceiverApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(ReceiverApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(ReceiverApplication.class, args);
+	}
 
-    @Component
-    public static class Receiver {
+	@Component
+	public static class Receiver {
 
-        public static final String EXCEPTION_REQUEST = "Please throw an exception";
-        public static final String REQUESTED_EXCEPTION = "Here you go";
+		public static final String EXCEPTION_REQUEST = "Please throw an exception";
+		public static final String REQUESTED_EXCEPTION = "Here you go";
 
-        private final List<Message> handledMessages = new ArrayList<>();
+		private final List<Message> handledMessages = new ArrayList<>();
 
-        private final List<Message> receivedMessages = new ArrayList<>();
-        private CountDownLatch latch;
+		private final List<Message> receivedMessages = new ArrayList<>();
+		private CountDownLatch latch;
 
-        @StreamListener(Sink.INPUT)
-        public void receive(Message message) {
-            receivedMessages.add(message);
+		@StreamListener(Sink.INPUT)
+		public void receive(Message message) {
+			receivedMessages.add(message);
 
-            Object payload = message.getPayload();
-            if (payload.equals(EXCEPTION_REQUEST)) {
-                throw new RuntimeException(REQUESTED_EXCEPTION);
-            }
+			Object payload = message.getPayload();
+			if (payload.equals(EXCEPTION_REQUEST)) {
+				throw new RuntimeException(REQUESTED_EXCEPTION);
+			}
 
-            handledMessages.add(message);
-            if (latch != null) {
-                latch.countDown();
-            }
-        }
+			handledMessages.add(message);
+			if (latch != null) {
+				latch.countDown();
+			}
+		}
 
-        public void setLatch(CountDownLatch latch) {
-            this.latch = latch;
-        }
+		public void setLatch(CountDownLatch latch) {
+			this.latch = latch;
+		}
 
-        public List<Message> getHandledMessages() {
-            return handledMessages;
-        }
+		public List<Message> getHandledMessages() {
+			return handledMessages;
+		}
 
-        public List<Message> getReceivedMessages() {
-            return receivedMessages;
-        }
-    }
+		public List<Message> getReceivedMessages() {
+			return receivedMessages;
+		}
+	}
 }

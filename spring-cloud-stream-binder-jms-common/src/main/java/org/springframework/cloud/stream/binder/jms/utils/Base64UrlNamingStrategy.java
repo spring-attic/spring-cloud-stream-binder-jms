@@ -13,27 +13,27 @@ import org.springframework.util.Base64Utils;
  */
 public class Base64UrlNamingStrategy implements AnonymousNamingStrategy {
 
-    private String prefix = "spring.gen-";
+	private String prefix = "spring.gen-";
 
-    public Base64UrlNamingStrategy() {
-    }
+	public Base64UrlNamingStrategy() {
+	}
 
-    public Base64UrlNamingStrategy(String prefix) {
-        this.prefix = prefix;
-    }
+	public Base64UrlNamingStrategy(String prefix) {
+		this.prefix = prefix;
+	}
 
-    @Override
-    public String generateName() {
-        return generateName(this.prefix);
-    }
+	@Override
+	public String generateName() {
+		return generateName(this.prefix);
+	}
 
-    @Override
-    public String generateName(String prefix) {
-        UUID uuid = UUID.randomUUID();
-        ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
-        bb.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
-        // Convert to base64 and remove trailing =
-        return prefix + Base64Utils.encodeToUrlSafeString(bb.array()).replaceAll("=", "")
-                .replaceAll("-", "\\$");
-    }
+	@Override
+	public String generateName(String prefix) {
+		UUID uuid = UUID.randomUUID();
+		ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
+		bb.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
+		// Convert to base64 and remove trailing =
+		return prefix + Base64Utils.encodeToUrlSafeString(bb.array()).replaceAll("=", "")
+				.replaceAll("-", "\\$");
+	}
 }

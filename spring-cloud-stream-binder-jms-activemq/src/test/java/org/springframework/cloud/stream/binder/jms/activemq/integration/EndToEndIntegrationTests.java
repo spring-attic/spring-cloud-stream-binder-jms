@@ -9,21 +9,21 @@ import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
  * @since 1.1
  */
 public class EndToEndIntegrationTests extends org.springframework.cloud.stream.binder.test.integration.EndToEndIntegrationTests {
-    private static ActiveMQConnectionFactory connectionFactory;
+	private static ActiveMQConnectionFactory connectionFactory;
 
-    static {
-        try {
-            connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	static {
+		try {
+			connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-    public EndToEndIntegrationTests() throws Exception {
-        super(
-                new ActiveMQQueueProvisioner(connectionFactory),
-                connectionFactory
-        );
-    }
+	public EndToEndIntegrationTests() throws Exception {
+		super(
+				new ActiveMQQueueProvisioner(connectionFactory),
+				connectionFactory
+		);
+	}
 
 }

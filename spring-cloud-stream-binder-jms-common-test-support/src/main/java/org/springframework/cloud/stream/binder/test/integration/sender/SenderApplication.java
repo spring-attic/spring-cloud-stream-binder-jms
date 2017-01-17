@@ -5,7 +5,7 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ *		http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,36 +35,36 @@ import java.util.Map;
 @EnableBinding(Source.class)
 public class SenderApplication {
 
-    public static void main(String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(SenderApplication.class, args);
-        Sender generator = context.getBean(Sender.class);
-        generator.send("Joseph");
-        generator.send("Jack");
-    }
+	public static void main(String[] args) {
+		ConfigurableApplicationContext context = SpringApplication.run(SenderApplication.class, args);
+		Sender generator = context.getBean(Sender.class);
+		generator.send("Joseph");
+		generator.send("Jack");
+	}
 
-    @Component
-    public static class Sender {
+	@Component
+	public static class Sender {
 
-        private Source source;
+		private Source source;
 
-        @Autowired
-        public Sender(Source source) {
-            this.source = source;
-        }
+		@Autowired
+		public Sender(Source source) {
+			this.source = source;
+		}
 
-        public void send(Object something) {
-            send(something, new HashMap<String, Object>());
-        }
+		public void send(Object something) {
+			send(something, new HashMap<String, Object>());
+		}
 
-        public void send(Object something, Map<String, Object> headers) {
-            MessageBuilder<Object> builder = MessageBuilder.withPayload(something);
+		public void send(Object something, Map<String, Object> headers) {
+			MessageBuilder<Object> builder = MessageBuilder.withPayload(something);
 
-            for (Map.Entry<String, Object> entry : headers.entrySet()) {
-                builder.setHeader(entry.getKey(), entry.getValue());
-            }
+			for (Map.Entry<String, Object> entry : headers.entrySet()) {
+				builder.setHeader(entry.getKey(), entry.getValue());
+			}
 
-            Message message = builder.build();
-            source.output().send(message);
-        }
-    }
+			Message message = builder.build();
+			source.output().send(message);
+		}
+	}
 }
