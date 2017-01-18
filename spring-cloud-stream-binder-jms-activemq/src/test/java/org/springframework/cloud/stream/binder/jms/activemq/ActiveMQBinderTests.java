@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016 the original author or authors.
+ *  Copyright 2016-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.springframework.jms.core.JmsTemplate;
 
 /**
  * @author Ilayaperumal Gopinathan
+ * @author Gary Russell
  */
 public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder, ConsumerProperties,
 		ProducerProperties> {
@@ -47,12 +48,20 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 		GenericApplicationContext applicationContext = new GenericApplicationContext();
 		applicationContext.refresh();
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
-		JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(jmsTemplate, applicationContext.getBeanFactory(), new DefaultJmsHeaderMapper());
-		DestinationNameResolver destinationNameResolver = new DestinationNameResolver(new Base64UrlNamingStrategy());
+		JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(
+				jmsTemplate, new DefaultJmsHeaderMapper());
+		jmsSendingMessageHandlerFactory.setApplicationContext(applicationContext);
+		jmsSendingMessageHandlerFactory.setBeanFactory(applicationContext.getBeanFactory());
 		ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(connectionFactory);
-		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate, new DefaultJmsHeaderMapper());
-		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer, destinationNameResolver);
-		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner, new DestinationNameResolver(new Base64UrlNamingStrategy()), jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory);
+		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate,
+				new DefaultJmsHeaderMapper());
+		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(
+				listenerContainerFactory, messageRecoverer);
+		jmsMessageDrivenChannelAdapterFactory.setApplicationContext(applicationContext);
+		jmsMessageDrivenChannelAdapterFactory.setBeanFactory(applicationContext.getBeanFactory());
+		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner,
+				new DestinationNameResolver(new Base64UrlNamingStrategy()), jmsSendingMessageHandlerFactory,
+				jmsMessageDrivenChannelAdapterFactory);
 		binder.setApplicationContext(applicationContext);
 		ActiveMQTestBinder testBinder = new ActiveMQTestBinder();
 		testBinder.setBinder(binder);

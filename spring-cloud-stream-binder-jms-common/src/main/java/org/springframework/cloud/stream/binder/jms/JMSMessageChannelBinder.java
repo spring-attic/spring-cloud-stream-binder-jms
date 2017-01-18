@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,19 +16,25 @@
 
 package org.springframework.cloud.stream.binder.jms;
 
+import java.util.Collection;
+
+import javax.jms.JMSException;
+import javax.jms.Queue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.cloud.stream.binder.AbstractMessageChannelBinder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
-import org.springframework.cloud.stream.binder.jms.utils.*;
+import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
+import org.springframework.cloud.stream.binder.jms.utils.DestinationNames;
+import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
+import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
+import org.springframework.cloud.stream.binder.jms.utils.TopicPartitionRegistrar;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
 import org.springframework.messaging.MessageHandler;
-
-import javax.jms.JMSException;
-import javax.jms.Queue;
-import java.util.Collection;
 
 /**
  * Binder definition for JMS.
@@ -37,21 +43,24 @@ import java.util.Collection;
  * @author Jonathan Sharpe
  * @author Joseph Taylor
  * @author José Carlos Valero
+ * @author Gary Russell
  * @since 1.1
  */
-public class JMSMessageChannelBinder extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties, Queue, TopicPartitionRegistrar> {
+public class JMSMessageChannelBinder
+		extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties, Queue, TopicPartitionRegistrar> {
+
 	protected final Log logger = LogFactory.getLog(this.getClass());
+
 	private final QueueProvisioner queueProvisioner;
+
 	private final DestinationNameResolver destinationNameResolver;
 
-	private JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
-	private JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory;
+	private final JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
+	private final JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory;
 
-	public JMSMessageChannelBinder(QueueProvisioner queueProvisioner,
-								   DestinationNameResolver destinationNameResolver,
-								   JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory,
-								   JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory
-	) throws JMSException {
+	public JMSMessageChannelBinder(QueueProvisioner queueProvisioner, DestinationNameResolver destinationNameResolver,
+			JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory,
+			JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory) throws JMSException {
 		super(true, null);
 		this.destinationNameResolver = destinationNameResolver;
 		this.jmsSendingMessageHandlerFactory = jmsSendingMessageHandlerFactory;

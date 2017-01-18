@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,18 +16,24 @@
 
 package org.springframework.cloud.stream.binder.jms.config;
 
-import org.springframework.beans.factory.BeanFactory;
+import javax.jms.ConnectionFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
-import org.springframework.cloud.stream.binder.jms.utils.*;
+import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
+import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
+import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
+import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
+import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
+import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.utils.SpecCompliantJmsHeaderMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.codec.Codec;
 import org.springframework.jms.core.JmsTemplate;
-
-import javax.jms.ConnectionFactory;
 
 /**
  * Configuration class containing required beans in order to set up the JMS
@@ -38,6 +44,7 @@ import javax.jms.ConnectionFactory;
  * @author Joseph Taylor
  * @author José Carlos Valero
  * @author Donovan Muller
+ * @author Gary Russell
  * @since 1.1
  */
 @Configuration
@@ -63,17 +70,15 @@ public class JmsBinderGlobalConfiguration {
 	}
 
 	@Bean
-	public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(MessageRecoverer messageRecoverer,
-																					   ListenerContainerFactory listenerContainerFactory) throws Exception {
-		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory,
-				messageRecoverer,
-				queueNameResolver());
+	public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(
+			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory) throws Exception {
+		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean(JmsSendingMessageHandlerFactory.class)
-	public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory(BeanFactory beanFactory) throws Exception {
-		return new JmsSendingMessageHandlerFactory(jmsTemplate(), beanFactory, new SpecCompliantJmsHeaderMapper());
+	public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory() throws Exception {
+		return new JmsSendingMessageHandlerFactory(jmsTemplate(), new SpecCompliantJmsHeaderMapper());
 	}
 
 	@Bean
@@ -87,18 +92,13 @@ public class JmsBinderGlobalConfiguration {
 	public static class JmsBinderConfiguration {
 
 		@Bean
-		JMSMessageChannelBinder jmsMessageChannelBinder(QueueProvisioner queueProvisioner,
-														Codec codec,
-														JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
-														DestinationNameResolver destinationNameResolver,
-														JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory) throws Exception {
+		JMSMessageChannelBinder jmsMessageChannelBinder(QueueProvisioner queueProvisioner, Codec codec,
+				JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
+				DestinationNameResolver destinationNameResolver,
+				JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory) throws Exception {
 
-			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(
-					queueProvisioner,
-					destinationNameResolver,
-					jmsSendingMessageHandlerFactory,
-					jmsMessageDrivenChannelAdapterFactory
-			);
+			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(queueProvisioner,
+					destinationNameResolver, jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory);
 			jmsMessageChannelBinder.setCodec(codec);
 			return jmsMessageChannelBinder;
 		}

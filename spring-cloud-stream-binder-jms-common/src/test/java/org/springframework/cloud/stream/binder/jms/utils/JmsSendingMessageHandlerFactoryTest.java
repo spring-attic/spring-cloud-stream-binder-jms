@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,26 +16,40 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+
 import org.hamcrest.Matchers;
 import org.junit.Test;
+
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.ApplicationContext;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-
 /**
  * @author José Carlos Valero
+ * @author Gary Russell
  * @since 1.1
  */
 public class JmsSendingMessageHandlerFactoryTest {
 
 	public static final TopicPartitionRegistrar TOPIC_PARTITION_REGISTRAR = new TopicPartitionRegistrar();
+
 	JmsTemplate jmsTemplate = mock(JmsTemplate.class);
+
 	BeanFactory beanFactory = mock(BeanFactory.class);
-	private JmsSendingMessageHandlerFactory target = new JmsSendingMessageHandlerFactory(jmsTemplate,beanFactory, new DefaultJmsHeaderMapper());
+
+	ApplicationContext applicationContext = mock(ApplicationContext.class);
+
+	private final JmsSendingMessageHandlerFactory target = new JmsSendingMessageHandlerFactory(this.jmsTemplate,
+			new DefaultJmsHeaderMapper());
+
+	{
+		target.setApplicationContext(this.applicationContext);
+		target.setBeanFactory(this.beanFactory);
+	}
 
 	//Not too sure about these tests, but can't find a better way of actually testing a factory without interacting with the subproduct.
 
@@ -52,5 +66,7 @@ public class JmsSendingMessageHandlerFactoryTest {
 
 		assertThat(ReflectionTestUtils.getField(handler, "destinations"), Matchers.<Object>is(TOPIC_PARTITION_REGISTRAR));
 		assertThat(ReflectionTestUtils.getField(handler, "beanFactory"), Matchers.<Object>is(beanFactory));
+		assertThat(ReflectionTestUtils.getField(handler, "applicationContext"), Matchers.<Object>is(this.applicationContext));
 	}
+
 }
