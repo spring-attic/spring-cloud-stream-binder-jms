@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 
@@ -25,20 +29,33 @@ import org.springframework.jms.core.JmsTemplate;
  *
  * @author José Carlos Valero
  * @author Donovan Muller
+ * @author Gary Russell
  * @since 1.1
  */
-public class JmsSendingMessageHandlerFactory {
+public class JmsSendingMessageHandlerFactory implements ApplicationContextAware, BeanFactoryAware {
 
 	private final JmsTemplate template;
-	private final BeanFactory beanFactory;
-	private JmsHeaderMapper headerMapper;
+
+	private ApplicationContext applicationContext;
+
+	private BeanFactory beanFactory;
+
+	private final JmsHeaderMapper headerMapper;
 
 	public JmsSendingMessageHandlerFactory(JmsTemplate template,
-										   BeanFactory beanFactory,
 										   JmsHeaderMapper headerMapper) {
 		this.template = template;
-		this.beanFactory = beanFactory;
 		this.headerMapper = headerMapper;
+	}
+
+	@Override
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		this.beanFactory = beanFactory;
+	}
+
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 	public PartitionAwareJmsSendingMessageHandler build(TopicPartitionRegistrar destinations) {
@@ -47,9 +64,10 @@ public class JmsSendingMessageHandlerFactory {
 				this.template,
 				destinations,
 				headerMapper);
-		handler.setBeanFactory(beanFactory);
+		handler.setApplicationContext(this.applicationContext);
+		handler.setBeanFactory(this.beanFactory);
 		handler.afterPropertiesSet();
-
 		return handler;
 	}
+
 }
