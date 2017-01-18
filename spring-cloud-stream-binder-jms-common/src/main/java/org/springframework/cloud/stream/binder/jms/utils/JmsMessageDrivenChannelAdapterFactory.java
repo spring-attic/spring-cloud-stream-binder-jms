@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,18 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import javax.jms.BytesMessage;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Queue;
+import javax.jms.Session;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
 import org.springframework.integration.jms.ChannelPublishingJmsMessageListener;
 import org.springframework.retry.RecoveryCallback;
@@ -26,87 +37,105 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
-import javax.jms.*;
-
 /**
  * Component responsible of building up endpoint required to bind consumers.
  *
  * @author José Carlos Valero
+ * @author Gary Russell
  * @since 1.1
  */
-public class JmsMessageDrivenChannelAdapterFactory {
+public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContextAware, BeanFactoryAware {
+
 	private final ListenerContainerFactory listenerContainerFactory;
+
 	private final MessageRecoverer messageRecoverer;
-	private final DestinationNameResolver destinationNameResolver;
+
+	private BeanFactory beanFactory;
+
+	private ApplicationContext applicationContext;
 
 
 	public JmsMessageDrivenChannelAdapterFactory(ListenerContainerFactory listenerContainerFactory,
-												 MessageRecoverer messageRecoverer,
-												 DestinationNameResolver destinationNameResolver) {
+			MessageRecoverer messageRecoverer) {
 		this.listenerContainerFactory = listenerContainerFactory;
 		this.messageRecoverer = messageRecoverer;
-		this.destinationNameResolver = destinationNameResolver;
+	}
+
+	@Override
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		this.beanFactory = beanFactory;
+	}
+
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 	public JmsMessageDrivenChannelAdapter build(Queue group,
-												final ConsumerProperties properties) {
-		return new JmsMessageDrivenChannelAdapter(
-					listenerContainerFactory.build(group),
-					// the listener is the channel adapter. it connects the JMS endpoint to the input
-					// channel by converting the messages that the listener container passes to it
-					new RetryingChannelPublishingJmsMessageListener(properties, messageRecoverer)
-			);
+			final ConsumerProperties properties) {
+		RetryingChannelPublishingJmsMessageListener listener = new RetryingChannelPublishingJmsMessageListener(
+				properties, messageRecoverer);
+		listener.setBeanFactory(this.beanFactory);
+		JmsMessageDrivenChannelAdapter adapter = new JmsMessageDrivenChannelAdapter(
+				listenerContainerFactory.build(group), listener);
+		adapter.setApplicationContext(this.applicationContext);
+		adapter.setBeanFactory(this.beanFactory);
+		return adapter;
 	}
 
 	private static class RetryingChannelPublishingJmsMessageListener extends ChannelPublishingJmsMessageListener {
-		final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
+
+		private final String RETRY_CONTEXT_MESSAGE_ATTRIBUTE = "message";
 
 		private final ConsumerProperties properties;
-		private MessageRecoverer messageRecoverer;
 
-		private RetryingChannelPublishingJmsMessageListener(ConsumerProperties properties, MessageRecoverer messageRecoverer) {
+		private final MessageRecoverer messageRecoverer;
+
+		RetryingChannelPublishingJmsMessageListener(ConsumerProperties properties,
+				MessageRecoverer messageRecoverer) {
 			this.properties = properties;
 			this.messageRecoverer = messageRecoverer;
 		}
 
 		@Override
-		public void onMessage(final Message jmsMessage,
-		final Session session) throws JMSException {
+		public void onMessage(final Message jmsMessage, final Session session) throws JMSException {
 			getRetryTemplate(properties).execute(
 					new RetryCallback<Object, JMSException>() {
+
 						@Override
 						public Object doWithRetry(RetryContext retryContext) throws JMSException {
 							try {
-								retryContext.setAttribute(
-										RETRY_CONTEXT_MESSAGE_ATTRIBUTE,
-										jmsMessage);
+								retryContext.setAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE, jmsMessage);
 								RetryingChannelPublishingJmsMessageListener.super.onMessage(jmsMessage, session);
-							} catch (JMSException e) {
+							}
+							catch (JMSException e) {
 								logger.error("Failed to send message",
 										e);
 								resetMessageIfRequired(jmsMessage);
 								throw new RuntimeException(e);
-							} catch (Exception e) {
+							}
+							catch (Exception e) {
 								resetMessageIfRequired(jmsMessage);
 								throw e;
 							}
 							return null;
 						}
+
 					},
 					new RecoveryCallback<Object>() {
+
 						@Override
 						public Object recover(RetryContext retryContext) throws Exception {
 							if (messageRecoverer != null) {
-								Message message = (Message) retryContext.getAttribute(
-										RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
-								messageRecoverer.recover(message,
-										retryContext.getLastThrowable());
-							} else {
-								logger.warn(
-										"No message recoverer was configured. Messages will be discarded.");
+								Message message = (Message) retryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
+								messageRecoverer.recover(message, retryContext.getLastThrowable());
+							}
+							else {
+								logger.warn("No message recoverer was configured. Messages will be discarded.");
 							}
 							return null;
 						}
+
 					}
 			);
 		}
@@ -132,8 +161,5 @@ public class JmsMessageDrivenChannelAdapterFactory {
 		}
 
 	}
-
-
-
 
 }

@@ -16,6 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HEADER;
+
+import javax.jms.Destination;
+import javax.jms.JMSException;
+
 import org.springframework.context.Lifecycle;
 import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.integration.jms.JmsHeaderMapper;
@@ -23,11 +28,6 @@ import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
 import org.springframework.messaging.Message;
-
-import javax.jms.Destination;
-import javax.jms.JMSException;
-
-import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HEADER;
 
 /**
  * Extension of {@link JmsSendingMessageHandler}, with partition awareness.
@@ -42,9 +42,10 @@ import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HE
  */
 public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandler implements Lifecycle {
 
+	private final JmsTemplate jmsTemplate;
 
-	private JmsTemplate jmsTemplate;
 	private final TopicPartitionRegistrar destinations;
+
 	private final JmsHeaderMapper headerMapper;
 
 	public PartitionAwareJmsSendingMessageHandler(JmsTemplate jmsTemplate,
