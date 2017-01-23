@@ -18,7 +18,6 @@
             <artifactId>spring-cloud-stream-binder-jms-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-client</artifactId>

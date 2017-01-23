@@ -30,11 +30,13 @@ import javax.jms.Message;
  */
 public interface MessageRecoverer {
 
+	String ACTIVE_MQ_DLQ = "ActiveMQ.DLQ";
+
 	/**
 	 * Recover from the failure to deliver a message.
 	 *
 	 * @param undeliveredMessage the message that has not been delivered.
 	 * @param cause the reason for the failure to deliver.
 	 */
-	void recover(Message undeliveredMessage, Throwable cause);
+	void recover(Message undeliveredMessage, String dlq, Throwable cause);
 }

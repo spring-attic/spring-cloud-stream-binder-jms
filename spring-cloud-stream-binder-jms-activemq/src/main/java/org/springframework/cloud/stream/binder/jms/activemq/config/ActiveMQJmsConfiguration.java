@@ -16,7 +16,10 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq.config;
 
+import javax.jms.ConnectionFactory;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
+
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -24,11 +27,11 @@ import org.springframework.boot.autoconfigure.jms.JndiConnectionFactoryAutoConfi
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.activemq.ActiveMQQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.config.JmsBinderAutoConfiguration;
+import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
+import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-
-import javax.jms.ConnectionFactory;
 
 /**
  * ActiveMQ specific configuration.
@@ -53,8 +56,9 @@ public class ActiveMQJmsConfiguration {
 	}
 
 	@Bean
-	public ActiveMQQueueProvisioner solaceQueueProvisioner(ActiveMQConnectionFactory connectionFactory) throws Exception {
-		return new ActiveMQQueueProvisioner(connectionFactory);
+	ProvisioningProvider solaceQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
+												DestinationNameResolver destinationNameResolver) {
+		return new ActiveMQQueueProvisioner(connectionFactory, destinationNameResolver);
 	}
 
 }

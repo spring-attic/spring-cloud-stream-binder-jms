@@ -16,11 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
-
-import javax.jms.ConnectionFactory;
-import javax.jms.Queue;
 
 /**
  * Factory to create Jms ListenerContainer
@@ -37,7 +37,7 @@ public class ListenerContainerFactory {
 		this.factory = factory;
 	}
 
-	public AbstractMessageListenerContainer build(Queue group) {
+	public AbstractMessageListenerContainer build(Destination group) {
 		DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
 		listenerContainer.setDestination(group);
 		listenerContainer.setPubSubDomain(false);

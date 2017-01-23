@@ -16,21 +16,21 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Map;
+import javax.jms.JMSException;
+import javax.jms.Message;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
+
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.SimpleMessageConverter;
 import org.springframework.messaging.MessageHeaders;
-
-import javax.jms.JMSException;
-import javax.jms.Message;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Map;
 
 /**
  * {@link MessageRecoverer} implementation that republishes recovered messages
@@ -55,18 +55,16 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
 	private final Log logger = LogFactory.getLog(getClass());
 
 	private final JmsTemplate jmsTemplate;
-	private final QueueProvisioner queueProvisioner;
 	private final JmsHeaderMapper mapper;
 
-	public RepublishMessageRecoverer(QueueProvisioner queueProvisioner, JmsTemplate jmsTemplate, JmsHeaderMapper mapper) {
+	public RepublishMessageRecoverer(JmsTemplate jmsTemplate, JmsHeaderMapper mapper) {
 		this.jmsTemplate = jmsTemplate;
-		this.queueProvisioner = queueProvisioner;
 		this.mapper = mapper;
 	}
 
 	@Override
-	public void recover(Message undeliveredMessage, Throwable cause) {
-		String deadLetterQueueName = queueProvisioner.provisionDeadLetterQueue();
+	public void recover(Message undeliveredMessage, String dlq, Throwable cause) {
+		//String deadLetterQueueName = destination.getDlq();
 
 		MessageConverter converter = new SimpleMessageConverter();
 		Object payload = null;
@@ -90,7 +88,7 @@ public class RepublishMessageRecoverer implements MessageRecoverer {
 			headers.putAll(additionalHeaders);
 		}
 
-		jmsTemplate.convertAndSend(deadLetterQueueName, payload, new MessagePostProcessor() {
+		jmsTemplate.convertAndSend(dlq, payload, new MessagePostProcessor() {
 			@Override
 			public Message postProcessMessage(Message message) throws JMSException {
 				mapper.fromHeaders(new MessageHeaders(headers), message);

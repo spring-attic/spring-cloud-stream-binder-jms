@@ -16,19 +16,22 @@
 
 package org.springframework.cloud.stream.binder.jms;
 
-import java.util.Collection;
-
+import javax.jms.ConnectionFactory;
 import javax.jms.Queue;
+import javax.jms.Session;
+import javax.jms.Topic;
 
 import org.springframework.cloud.stream.binder.AbstractMessageChannelBinder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNames;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
 import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.TopicPartitionRegistrar;
+import org.springframework.cloud.stream.provisioning.ConsumerDestination;
+import org.springframework.cloud.stream.provisioning.ProducerDestination;
+import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.support.destination.DestinationResolver;
 import org.springframework.messaging.MessageHandler;
 
 /**
@@ -39,66 +42,58 @@ import org.springframework.messaging.MessageHandler;
  * @author Joseph Taylor
  * @author José Carlos Valero
  * @author Gary Russell
+ * @author Soby Chacko
  * @since 1.1
  */
 public class JMSMessageChannelBinder
-		extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties, Queue, TopicPartitionRegistrar> {
-
-	private final QueueProvisioner queueProvisioner;
-
-	private final DestinationNameResolver destinationNameResolver;
+		extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties> {
 
 	private final JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
 	private final JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory;
+	private final ConnectionFactory connectionFactory;
 
-	public JMSMessageChannelBinder(QueueProvisioner queueProvisioner, DestinationNameResolver destinationNameResolver,
-			JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory,
-			JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory) {
-		super(true, null);
-		this.destinationNameResolver = destinationNameResolver;
+	private final DestinationResolver destinationResolver;
+
+	public JMSMessageChannelBinder(ProvisioningProvider<ConsumerProperties, ProducerProperties> provisioningProvider,
+								   JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory,
+								   JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
+								   JmsTemplate jmsTemplate,
+								   ConnectionFactory connectionFactory) {
+		super(true, null, provisioningProvider);
 		this.jmsSendingMessageHandlerFactory = jmsSendingMessageHandlerFactory;
 		this.jmsMessageDrivenChannelAdapterFactory = jmsMessageDrivenChannelAdapterFactory;
-		this.queueProvisioner = queueProvisioner;
+		this.connectionFactory = connectionFactory;
+		this.destinationResolver = jmsTemplate.getDestinationResolver();
 	}
 
 	@Override
-	protected TopicPartitionRegistrar createProducerDestinationIfNecessary(String name,
-														ProducerProperties properties) {
-		TopicPartitionRegistrar topicPartitionRegistrar = new TopicPartitionRegistrar();
-		Collection<DestinationNames> topicAndQueueNames =
-				this.destinationNameResolver.resolveTopicAndQueueNameForRequiredGroups(name, properties);
-
-		QueueProvisioner.Destinations destinations;
-		for (DestinationNames destinationNames : topicAndQueueNames) {
-			destinations = this.queueProvisioner.provisionTopicAndConsumerGroup(destinationNames.getTopicName(),
-					destinationNames.getGroupNames());
-			topicPartitionRegistrar.addDestination(destinationNames.getPartitionIndex(),destinations.getTopic());
-		}
-		return topicPartitionRegistrar;
-	}
-
-	@Override
-	protected Queue createConsumerDestinationIfNecessary(String name,
-														 String group,
-														 ConsumerProperties properties) {
-		String groupName = this.destinationNameResolver.resolveQueueNameForInputGroup(group, properties);
-		String topicName = this.destinationNameResolver.resolveQueueNameForInputGroup(name, properties);
-		QueueProvisioner.Destinations destinations =
-				this.queueProvisioner.provisionTopicAndConsumerGroup(topicName, groupName);
-		return destinations.getGroups()[0];
-
-	}
-
-	@Override
-	protected MessageHandler createProducerMessageHandler(TopicPartitionRegistrar destination,
+	protected MessageHandler createProducerMessageHandler(ProducerDestination producerDestination,
 														  ProducerProperties producerProperties) throws Exception {
-		return this.jmsSendingMessageHandlerFactory.build(destination);
+		TopicPartitionRegistrar topicPartitionRegistrar = new TopicPartitionRegistrar();
+		Session session = connectionFactory.createConnection().createSession(true, 1);
+
+		if (producerProperties.isPartitioned()) {
+			int partitionCount = producerProperties.getPartitionCount();
+			for (int i = 0; i < partitionCount; ++i) {
+				String destination = producerDestination.getPartitionedProducerDestinationName(i);
+				Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
+				topicPartitionRegistrar.addDestination(i, topic);
+			}
+		}
+		else {
+			String destination = producerDestination.getProducerDestinationName();
+			Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
+			topicPartitionRegistrar.addDestination(-1, topic);
+		}
+		return this.jmsSendingMessageHandlerFactory.build(topicPartitionRegistrar);
 	}
 
 	@Override
 	protected org.springframework.integration.core.MessageProducer createConsumerEndpoint(
-			String name, String group, Queue destination, ConsumerProperties properties) {
-		return jmsMessageDrivenChannelAdapterFactory.build(destination, properties);
+			ConsumerDestination consumerDestination, String group, ConsumerProperties properties) throws Exception {
+		Session session = connectionFactory.createConnection().createSession(true, 1);
+		Queue queue = (Queue) destinationResolver.resolveDestinationName(session, consumerDestination.getConsumerDestinationName(), false);
+		return jmsMessageDrivenChannelAdapterFactory.build(queue, properties);
 	}
 
 }

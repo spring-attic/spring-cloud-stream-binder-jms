@@ -16,9 +16,6 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
@@ -27,6 +24,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * @author José Carlos Valero
@@ -62,6 +62,7 @@ public class JmsSendingMessageHandlerFactoryTest {
 
 	@Test
 	public void build_configuresTheHandlerWithDestinationAndBeanFactory() throws Exception {
+
 		PartitionAwareJmsSendingMessageHandler handler = target.build(TOPIC_PARTITION_REGISTRAR);
 
 		assertThat(ReflectionTestUtils.getField(handler, "destinations"), Matchers.<Object>is(TOPIC_PARTITION_REGISTRAR));
