@@ -3,11 +3,15 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-stream-binder-jms-parent</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0.BUILD-SNAPSHOT</version>
+
+    <parent>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-build</artifactId>
+        <version>1.2.2.BUILD-SNAPSHOT</version>
+    </parent>
 
     <modules>
         <module>spring-cloud-stream-binder-jms-common</module>
@@ -16,18 +20,12 @@
         <module>spring-cloud-stream-binder-jms-activemq</module>
     </modules>
 
-    <parent>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-build</artifactId>
-        <version>1.2.2.BUILD-SNAPSHOT</version>
-    </parent>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-stream-dependencies</artifactId>
-                <version>Brooklyn.BUILD-SNAPSHOT</version>
+                <version>Chelsea.BUILD-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

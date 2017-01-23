@@ -20,8 +20,9 @@ import javax.jms.ConnectionFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
-import org.springframework.cloud.stream.binder.jms.spi.QueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
@@ -30,6 +31,7 @@ import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactor
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.SpecCompliantJmsHeaderMapper;
+import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.codec.Codec;
@@ -60,8 +62,8 @@ public class JmsBinderGlobalConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(MessageRecoverer.class)
-	MessageRecoverer defaultMessageRecoverer(QueueProvisioner queueProvisioner) throws Exception {
-		return new RepublishMessageRecoverer(queueProvisioner, jmsTemplate(), new SpecCompliantJmsHeaderMapper());
+	MessageRecoverer defaultMessageRecoverer() throws Exception {
+		return new RepublishMessageRecoverer(jmsTemplate(), new SpecCompliantJmsHeaderMapper());
 	}
 
 	@Bean
@@ -91,14 +93,19 @@ public class JmsBinderGlobalConfiguration {
 	@Configuration
 	public static class JmsBinderConfiguration {
 
-		@Bean
-		JMSMessageChannelBinder jmsMessageChannelBinder(QueueProvisioner queueProvisioner, Codec codec,
-				JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
-				DestinationNameResolver destinationNameResolver,
-				JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory) throws Exception {
+		@Autowired
+		private ProvisioningProvider<ConsumerProperties, ProducerProperties> provisioningProvider;
 
-			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(queueProvisioner,
-					destinationNameResolver, jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory);
+		@Autowired
+		private ConnectionFactory connectionFactory;
+
+		@Bean
+		JMSMessageChannelBinder jmsMessageChannelBinder(Codec codec,
+														JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
+														JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory, JmsTemplate jmsTemplate) throws Exception {
+
+			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(provisioningProvider,
+					jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory, jmsTemplate, connectionFactory);
 			jmsMessageChannelBinder.setCodec(codec);
 			return jmsMessageChannelBinder;
 		}

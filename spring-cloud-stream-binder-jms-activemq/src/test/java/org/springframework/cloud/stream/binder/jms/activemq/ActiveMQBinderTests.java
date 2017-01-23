@@ -13,6 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+
 package org.springframework.cloud.stream.binder.jms.activemq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
@@ -22,7 +23,6 @@ import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
-import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
@@ -30,6 +30,7 @@ import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandle
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
@@ -44,7 +45,7 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 	@Override
 	protected ActiveMQTestBinder getBinder() throws Exception {
 		ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory);
+		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory, new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
 		GenericApplicationContext applicationContext = new GenericApplicationContext();
 		applicationContext.refresh();
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
@@ -53,15 +54,15 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 		jmsSendingMessageHandlerFactory.setApplicationContext(applicationContext);
 		jmsSendingMessageHandlerFactory.setBeanFactory(applicationContext.getBeanFactory());
 		ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(connectionFactory);
-		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(queueProvisioner, jmsTemplate,
+		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(jmsTemplate,
 				new DefaultJmsHeaderMapper());
 		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(
 				listenerContainerFactory, messageRecoverer);
 		jmsMessageDrivenChannelAdapterFactory.setApplicationContext(applicationContext);
 		jmsMessageDrivenChannelAdapterFactory.setBeanFactory(applicationContext.getBeanFactory());
 		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner,
-				new DestinationNameResolver(new Base64UrlNamingStrategy()), jmsSendingMessageHandlerFactory,
-				jmsMessageDrivenChannelAdapterFactory);
+				jmsSendingMessageHandlerFactory,
+				jmsMessageDrivenChannelAdapterFactory, jmsTemplate, connectionFactory);
 		binder.setApplicationContext(applicationContext);
 		ActiveMQTestBinder testBinder = new ActiveMQTestBinder();
 		testBinder.setBinder(binder);

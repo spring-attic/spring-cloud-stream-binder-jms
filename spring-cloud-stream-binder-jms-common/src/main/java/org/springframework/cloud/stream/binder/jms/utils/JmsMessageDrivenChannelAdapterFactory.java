@@ -71,13 +71,13 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 		this.applicationContext = applicationContext;
 	}
 
-	public JmsMessageDrivenChannelAdapter build(Queue group,
-			final ConsumerProperties properties) {
+	public JmsMessageDrivenChannelAdapter build(Queue destination,
+												final ConsumerProperties properties) {
 		RetryingChannelPublishingJmsMessageListener listener = new RetryingChannelPublishingJmsMessageListener(
 				properties, messageRecoverer);
 		listener.setBeanFactory(this.beanFactory);
 		JmsMessageDrivenChannelAdapter adapter = new JmsMessageDrivenChannelAdapter(
-				listenerContainerFactory.build(group), listener);
+				listenerContainerFactory.build(destination), listener);
 		adapter.setApplicationContext(this.applicationContext);
 		adapter.setBeanFactory(this.beanFactory);
 		return adapter;
@@ -128,7 +128,7 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 						public Object recover(RetryContext retryContext) throws Exception {
 							if (messageRecoverer != null) {
 								Message message = (Message) retryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
-								messageRecoverer.recover(message, retryContext.getLastThrowable());
+								messageRecoverer.recover(message, MessageRecoverer.ACTIVE_MQ_DLQ, retryContext.getLastThrowable());
 							}
 							else {
 								logger.warn("No message recoverer was configured. Messages will be discarded.");

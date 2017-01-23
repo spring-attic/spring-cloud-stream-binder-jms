@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import static org.springframework.cloud.stream.binder.BinderHeaders.PARTITION_HEADER;
-
 import javax.jms.Destination;
 import javax.jms.JMSException;
 
+import org.springframework.cloud.stream.binder.BinderHeaders;
 import org.springframework.context.Lifecycle;
 import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.integration.jms.JmsHeaderMapper;
@@ -68,7 +67,7 @@ public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandl
 	}
 
 	private Destination determineDestination(Message<?> message) {
-		return destinations.getDestination(message.getHeaders().get(PARTITION_HEADER));
+		return destinations.getDestination(message.getHeaders().get(BinderHeaders.PARTITION_HEADER));
 	}
 
 	private static final class HeaderMappingMessagePostProcessor implements MessagePostProcessor {

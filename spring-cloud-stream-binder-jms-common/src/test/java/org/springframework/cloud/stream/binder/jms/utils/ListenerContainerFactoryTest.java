@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
-import org.hamcrest.core.Is;
-import org.junit.Test;
-import org.springframework.jms.listener.AbstractMessageListenerContainer;
-
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.Queue;
+
+import org.hamcrest.core.Is;
+import org.junit.Test;
+
+import org.springframework.jms.listener.AbstractMessageListenerContainer;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
