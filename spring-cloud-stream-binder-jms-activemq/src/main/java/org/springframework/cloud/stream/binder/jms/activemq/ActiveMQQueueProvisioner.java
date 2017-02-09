@@ -98,19 +98,18 @@ public class ActiveMQQueueProvisioner implements
 			connection = connectionFactory.createConnection();
 			session = connection.createSession(true, 1);
 			session.createQueue(ACTIVE_MQ_DLQ);
-		} catch (JMSException e) {
-			if (logger.isInfoEnabled()) {
-				logger.info("JMS Exception", e);
-			}
-		}finally {
+		}
+		catch (JMSException e) {
+			throw new IllegalStateException(e);
+		}
+		finally {
 			try {
 				JmsUtils.commitIfNecessary(session);
 				JmsUtils.closeSession(session);
 				JmsUtils.closeConnection(connection);
-			} catch (JMSException e) {
-				if (logger.isInfoEnabled()) {
-					logger.info("JMS Exception", e);
-				}
+			}
+			catch (JMSException e) {
+				logger.error("JMS Exception", e);
 			}
 		}
 		return new JmsConsumerDestination(queue);
@@ -128,10 +127,9 @@ public class ActiveMQQueueProvisioner implements
 			JmsUtils.commitIfNecessary(session);
 			JmsUtils.closeSession(session);
 			JmsUtils.closeConnection(activeMQConnection);
-		} catch (JMSException e) {
-			if (logger.isInfoEnabled()) {
-				logger.info("JMS Exception", e);
-			}
+		}
+		catch (JMSException e) {
+			throw new IllegalStateException(e);
 		}
 		return topic;
 	}
@@ -151,7 +149,7 @@ public class ActiveMQQueueProvisioner implements
 					 * therefore we must remove '.' from the consumer group name if present.
 					 * For example, anonymous consumer groups are named 'anonymous.*' by default.
 					 */
-					groups[i] = createQueue(topicName, session,	consumerGroupName[i].replaceAll("\\.", "_"));
+					groups[i] = createQueue(topicName, session, consumerGroupName[i].replaceAll("\\.", "_"));
 				}
 			}
 
@@ -161,10 +159,9 @@ public class ActiveMQQueueProvisioner implements
 			if (groups != null) {
 				return groups[0];
 			}
-		} catch (JMSException e) {
-			if (logger.isInfoEnabled()) {
-				logger.info("JMS Exception", e);
-			}
+		}
+		catch (JMSException e) {
+			throw new IllegalStateException(e);
 		}
 		return null;
 	}
@@ -185,29 +182,23 @@ public class ActiveMQQueueProvisioner implements
 		}
 
 		@Override
-		public String getProducerDestinationName() {
+		public String getName() {
 			try {
 				return partitionTopics.get(-1).getTopicName();
 			}
 			catch (JMSException e) {
-				if (logger.isInfoEnabled()) {
-					logger.info("JMS Exception", e);
-				}
+				throw new IllegalStateException(e);
 			}
-			return null;
 		}
 
 		@Override
-		public String getPartitionedProducerDestinationName(int partition) {
+		public String getNameForPartition(int partition) {
 			try {
 				return partitionTopics.get(partition).getTopicName();
 			}
 			catch (JMSException e) {
-				if (logger.isInfoEnabled()) {
-					logger.info("JMS Exception", e);
-				}
+				throw new IllegalStateException(e);
 			}
-			return null;
 		}
 
 		@Override
@@ -225,16 +216,13 @@ public class ActiveMQQueueProvisioner implements
 		}
 
 		@Override
-		public String getConsumerDestinationName() {
+		public String getName() {
 			try {
 				return this.queue.getQueueName();
 			}
 			catch (JMSException e) {
-				if (logger.isInfoEnabled()) {
-					logger.info("JMS Exception", e);
-				}
+				throw new IllegalStateException(e);
 			}
-			return null;
 		}
 
 		@Override

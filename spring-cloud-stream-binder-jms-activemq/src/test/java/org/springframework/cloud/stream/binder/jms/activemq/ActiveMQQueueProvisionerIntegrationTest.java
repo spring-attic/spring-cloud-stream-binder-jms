@@ -72,7 +72,7 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 		ProducerDestination producerDestination = target.provisionProducerDestination("topic", new ProducerProperties());
 		ConsumerDestination consumerDestination = target.provisionConsumerDestination("topic", "group1", new ConsumerProperties());
 
-		String dest = producerDestination.getProducerDestinationName();
+		String dest = producerDestination.getName();
 		DestinationResolver destinationResolver = jmsTemplate.getDestinationResolver();
 		Session session = activeMQConnectionFactory.createConnection().createSession(true, 1);
 		Topic topic = (Topic)destinationResolver.resolveDestinationName(session, dest, true);
@@ -83,7 +83,7 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 		try {
 			destinationResolver = jmsTemplate.getDestinationResolver();
 			session = activeMQConnectionFactory.createConnection().createSession(true, 1);
-			queue = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination.getConsumerDestinationName(), false);
+			queue = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination.getName(), false);
 			}
 		catch (Exception e) {
 			//TODO
@@ -101,7 +101,7 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 		ConsumerDestination consumerDestination1 = target.provisionConsumerDestination("topic", "group1", new ConsumerProperties());
 		ConsumerDestination consumerDestination2 = target.provisionConsumerDestination("topic", "group2", new ConsumerProperties());
 
-		String dest = producerDestination.getProducerDestinationName();
+		String dest = producerDestination.getName();
 		DestinationResolver destinationResolver = jmsTemplate.getDestinationResolver();
 		Session session = activeMQConnectionFactory.createConnection().createSession(true, 1);
 		Topic topic = (Topic)destinationResolver.resolveDestinationName(session, dest, true);
@@ -114,8 +114,8 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 		try {
 			destinationResolver = jmsTemplate.getDestinationResolver();
 			session = activeMQConnectionFactory.createConnection().createSession(true, 1);
-			queue1 = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination1.getConsumerDestinationName(), false);
-			queue2 = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination2.getConsumerDestinationName(), false);
+			queue1 = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination1.getName(), false);
+			queue2 = (Queue)destinationResolver.resolveDestinationName(session, consumerDestination2.getName(), false);
 		}
 		catch (Exception e) {
 			//TODO
@@ -180,7 +180,5 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 		public List<Message> getMessages() {
 			return messages;
 		}
-
-
 	}
 }

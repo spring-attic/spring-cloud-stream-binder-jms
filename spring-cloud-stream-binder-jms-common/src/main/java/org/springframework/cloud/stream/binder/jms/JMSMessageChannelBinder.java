@@ -75,13 +75,13 @@ public class JMSMessageChannelBinder
 		if (producerProperties.isPartitioned()) {
 			int partitionCount = producerProperties.getPartitionCount();
 			for (int i = 0; i < partitionCount; ++i) {
-				String destination = producerDestination.getPartitionedProducerDestinationName(i);
+				String destination = producerDestination.getNameForPartition(i);
 				Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
 				topicPartitionRegistrar.addDestination(i, topic);
 			}
 		}
 		else {
-			String destination = producerDestination.getProducerDestinationName();
+			String destination = producerDestination.getName();
 			Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
 			topicPartitionRegistrar.addDestination(-1, topic);
 		}
@@ -92,7 +92,7 @@ public class JMSMessageChannelBinder
 	protected org.springframework.integration.core.MessageProducer createConsumerEndpoint(
 			ConsumerDestination consumerDestination, String group, ConsumerProperties properties) throws Exception {
 		Session session = connectionFactory.createConnection().createSession(true, 1);
-		Queue queue = (Queue) destinationResolver.resolveDestinationName(session, consumerDestination.getConsumerDestinationName(), false);
+		Queue queue = (Queue) destinationResolver.resolveDestinationName(session, consumerDestination.getName(), false);
 		return jmsMessageDrivenChannelAdapterFactory.build(queue, properties);
 	}
 
