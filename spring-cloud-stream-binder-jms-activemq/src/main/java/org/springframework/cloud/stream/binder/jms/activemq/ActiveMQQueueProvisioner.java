@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNames;
 import org.springframework.cloud.stream.provisioning.ConsumerDestination;
 import org.springframework.cloud.stream.provisioning.ProducerDestination;
+import org.springframework.cloud.stream.provisioning.ProvisioningException;
 import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
 import org.springframework.jms.support.JmsUtils;
 
@@ -92,25 +93,25 @@ public class ActiveMQQueueProvisioner implements
 		final Queue queue = provisionConsumerGroup(topicName, groupName);
 
 		//DLQ
-		Session session = null;
-		Connection connection = null;
+		Session session;
+		Connection connection;
 		try {
 			connection = connectionFactory.createConnection();
 			session = connection.createSession(true, 1);
 			session.createQueue(ACTIVE_MQ_DLQ);
 		}
 		catch (JMSException e) {
-			throw new IllegalStateException(e);
+			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
+		}
+		try {
+			JmsUtils.commitIfNecessary(session);
+		}
+		catch (JMSException e) {
+			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
 		}
 		finally {
-			try {
-				JmsUtils.commitIfNecessary(session);
-				JmsUtils.closeSession(session);
-				JmsUtils.closeConnection(connection);
-			}
-			catch (JMSException e) {
-				logger.error("JMS Exception", e);
-			}
+			JmsUtils.closeSession(session);
+			JmsUtils.closeConnection(connection);
 		}
 		return new JmsConsumerDestination(queue);
 	}
@@ -187,7 +188,7 @@ public class ActiveMQQueueProvisioner implements
 				return partitionTopics.get(-1).getTopicName();
 			}
 			catch (JMSException e) {
-				throw new IllegalStateException(e);
+				throw new ProvisioningException("Error getting topic name", JmsUtils.convertJmsAccessException(e));
 			}
 		}
 
@@ -197,7 +198,7 @@ public class ActiveMQQueueProvisioner implements
 				return partitionTopics.get(partition).getTopicName();
 			}
 			catch (JMSException e) {
-				throw new IllegalStateException(e);
+				throw new ProvisioningException("Error getting topic name", JmsUtils.convertJmsAccessException(e));
 			}
 		}
 
@@ -221,7 +222,7 @@ public class ActiveMQQueueProvisioner implements
 				return this.queue.getQueueName();
 			}
 			catch (JMSException e) {
-				throw new IllegalStateException(e);
+				throw new ProvisioningException("Error getting queue name", JmsUtils.convertJmsAccessException(e));
 			}
 		}
 
