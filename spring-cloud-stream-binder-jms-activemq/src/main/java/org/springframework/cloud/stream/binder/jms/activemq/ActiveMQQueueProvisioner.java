@@ -130,7 +130,7 @@ public class ActiveMQQueueProvisioner implements
 			JmsUtils.closeConnection(activeMQConnection);
 		}
 		catch (JMSException e) {
-			throw new IllegalStateException(e);
+			throw new ProvisioningException("Error provisioning topic", JmsUtils.convertJmsAccessException(e));
 		}
 		return topic;
 	}
@@ -162,7 +162,7 @@ public class ActiveMQQueueProvisioner implements
 			}
 		}
 		catch (JMSException e) {
-			throw new IllegalStateException(e);
+			throw new ProvisioningException("Error provisioning queue", JmsUtils.convertJmsAccessException(e));
 		}
 		return null;
 	}
