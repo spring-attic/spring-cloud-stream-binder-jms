@@ -204,7 +204,9 @@ public class ActiveMQQueueProvisioner implements
 
 		@Override
 		public String toString() {
-			return partitionTopics.toString();
+			return "JmsProducerDestination{" +
+					"partitionTopics=" + partitionTopics +
+					'}';
 		}
 	}
 
@@ -228,7 +230,9 @@ public class ActiveMQQueueProvisioner implements
 
 		@Override
 		public String toString() {
-			return queue.toString();
+			return "JmsConsumerDestination{" +
+					"queue=" + queue +
+					'}';
 		}
 	}
 }
