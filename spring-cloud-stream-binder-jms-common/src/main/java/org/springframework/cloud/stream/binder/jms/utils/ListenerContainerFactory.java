@@ -1,5 +1,5 @@
 /*
- *  Copyright 2002-2016 the original author or authors.
+ *  Copyright 2002-2017 the original author or authors.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
-
-import javax.jms.ConnectionFactory;
-import javax.jms.Queue;
 
 /**
  * Factory to create Jms ListenerContainer
@@ -37,7 +37,7 @@ public class ListenerContainerFactory {
 		this.factory = factory;
 	}
 
-	public AbstractMessageListenerContainer build(Queue group) {
+	public AbstractMessageListenerContainer build(Destination group) {
 		DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
 		listenerContainer.setDestination(group);
 		listenerContainer.setPubSubDomain(false);
