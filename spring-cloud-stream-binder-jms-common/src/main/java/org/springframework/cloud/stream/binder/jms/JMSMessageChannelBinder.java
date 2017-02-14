@@ -46,7 +46,8 @@ import org.springframework.messaging.MessageHandler;
  * @since 1.1
  */
 public class JMSMessageChannelBinder
-		extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties> {
+		extends AbstractMessageChannelBinder<ConsumerProperties, ProducerProperties,
+										  ProvisioningProvider<ConsumerProperties, ProducerProperties>> {
 
 	private final JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory;
 	private final JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory;
