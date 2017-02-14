@@ -34,7 +34,7 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication.Receiver;
@@ -83,6 +83,7 @@ public abstract class EndToEndIntegrationTests {
 	protected static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
 	protected static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
 	protected static final String REQUIRED_GROUPS_FORMAT = "--spring.cloud.stream.bindings.output.producer.requiredGroups=%s";
+	protected static final String DLQ = new JmsBinderConfigurationProperties().getDeadLetterQueueName();
 	protected final JmsTemplate jmsTemplate;
 	protected final ProvisioningProvider<ConsumerProperties, ProducerProperties> queueProvisioner;
 	protected String randomGroupArg1;
@@ -258,11 +259,10 @@ public abstract class EndToEndIntegrationTests {
 		Sender sender = createSender();
 		createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
 		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ConsumerProperties());
-		String deadLetterQueue = MessageRecoverer.ACTIVE_MQ_DLQ;
 
 		sender.send(Receiver.EXCEPTION_REQUEST);
 
-		javax.jms.Message message = jmsTemplate.receive(deadLetterQueue);
+		javax.jms.Message message = jmsTemplate.receive(DLQ);
 		assertThat(message, notNullValue());
 
 		String stacktrace = message.getStringProperty(
@@ -294,9 +294,8 @@ public abstract class EndToEndIntegrationTests {
 			}
 		});
 		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ConsumerProperties());
-		String deadLetterQueue = MessageRecoverer.ACTIVE_MQ_DLQ;
 
-		javax.jms.Message message = jmsTemplate.receive(deadLetterQueue);
+		javax.jms.Message message = jmsTemplate.receive(DLQ);
 		assertThat(message, notNullValue());
 	}
 

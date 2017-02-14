@@ -1,0 +1,19 @@
+{
+  "groups": [
+    {
+      "name": "spring.cloud.stream.binder.jms",
+      "type": "org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.cloud.stream.binder.jms.deadLetterQueueName",
+      "type": "java.lang.String",
+      "description": "Name of the DLQ",
+      "sourceType": "org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties",
+      "defaultValue": "DLQ"
+    }
+  ],
+  "hints": []
+}

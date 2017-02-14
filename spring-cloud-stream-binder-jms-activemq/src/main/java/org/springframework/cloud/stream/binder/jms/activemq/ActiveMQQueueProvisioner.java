@@ -27,11 +27,12 @@ import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.provisioning.JmsConsumerDestination;
+import org.springframework.cloud.stream.binder.jms.provisioning.JmsProducerDestination;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNames;
 import org.springframework.cloud.stream.provisioning.ConsumerDestination;
@@ -49,16 +50,18 @@ import org.springframework.jms.support.JmsUtils;
 public class ActiveMQQueueProvisioner implements
 		ProvisioningProvider<ConsumerProperties, ProducerProperties> {
 
-	public static final String ACTIVE_MQ_DLQ = "ActiveMQ.DLQ";
-
-	private final Log logger = LogFactory.getLog(getClass());
 	private final ActiveMQConnectionFactory connectionFactory;
 
 	private final DestinationNameResolver destinationNameResolver;
 
-	public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory, DestinationNameResolver destinationNameResolver) {
+	private final JmsBinderConfigurationProperties jmsBinderConfigurationProperties;
+
+	public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
+									DestinationNameResolver destinationNameResolver,
+									JmsBinderConfigurationProperties jmsBinderConfigurationProperties) {
 		this.connectionFactory = connectionFactory;
 		this.destinationNameResolver = destinationNameResolver;
+		this.jmsBinderConfigurationProperties = jmsBinderConfigurationProperties;
 	}
 
 	@Override
@@ -98,7 +101,7 @@ public class ActiveMQQueueProvisioner implements
 		try {
 			connection = connectionFactory.createConnection();
 			session = connection.createSession(true, 1);
-			session.createQueue(ACTIVE_MQ_DLQ);
+			session.createQueue(jmsBinderConfigurationProperties.getDeadLetterQueueName());
 		}
 		catch (JMSException e) {
 			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
@@ -172,67 +175,5 @@ public class ActiveMQQueueProvisioner implements
 		//TODO: Understand why a producer is required to actually create the queue, it's not mentioned in ActiveMQ docs
 		session.createProducer(queue).close();
 		return queue;
-	}
-
-	private final class JmsProducerDestination implements ProducerDestination {
-
-		private final Map<Integer, Topic> partitionTopics;
-
-		private JmsProducerDestination(Map<Integer, Topic> partitionTopics) {
-			this.partitionTopics = partitionTopics;
-		}
-
-		@Override
-		public String getName() {
-			try {
-				return partitionTopics.get(-1).getTopicName();
-			}
-			catch (JMSException e) {
-				throw new ProvisioningException("Error getting topic name", JmsUtils.convertJmsAccessException(e));
-			}
-		}
-
-		@Override
-		public String getNameForPartition(int partition) {
-			try {
-				return partitionTopics.get(partition).getTopicName();
-			}
-			catch (JMSException e) {
-				throw new ProvisioningException("Error getting topic name", JmsUtils.convertJmsAccessException(e));
-			}
-		}
-
-		@Override
-		public String toString() {
-			return "JmsProducerDestination{" +
-					"partitionTopics=" + partitionTopics +
-					'}';
-		}
-	}
-
-	private final class JmsConsumerDestination implements ConsumerDestination {
-
-		private final Queue queue;
-
-		private JmsConsumerDestination(final Queue queue) {
-			this.queue = queue;
-		}
-
-		@Override
-		public String getName() {
-			try {
-				return this.queue.getQueueName();
-			}
-			catch (JMSException e) {
-				throw new ProvisioningException("Error getting queue name", JmsUtils.convertJmsAccessException(e));
-			}
-		}
-
-		@Override
-		public String toString() {
-			return "JmsConsumerDestination{" +
-					"queue=" + queue +
-					'}';
-		}
 	}
 }
