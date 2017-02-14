@@ -20,6 +20,7 @@ import javax.jms.ConnectionFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
@@ -50,6 +51,7 @@ import org.springframework.jms.core.JmsTemplate;
  * @since 1.1
  */
 @Configuration
+@EnableConfigurationProperties(JmsBinderConfigurationProperties.class)
 public class JmsBinderGlobalConfiguration {
 
 	@Autowired
@@ -73,8 +75,9 @@ public class JmsBinderGlobalConfiguration {
 
 	@Bean
 	public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(
-			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory) throws Exception {
-		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer);
+			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory,
+			JmsBinderConfigurationProperties jmsBinderConfigurationProperties) throws Exception {
+		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer, jmsBinderConfigurationProperties);
 	}
 
 	@Bean
