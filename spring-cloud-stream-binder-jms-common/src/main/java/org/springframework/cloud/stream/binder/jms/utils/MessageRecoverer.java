@@ -30,8 +30,6 @@ import javax.jms.Message;
  */
 public interface MessageRecoverer {
 
-	String ACTIVE_MQ_DLQ = "ActiveMQ.DLQ";
-
 	/**
 	 * Recover from the failure to deliver a message.
 	 *

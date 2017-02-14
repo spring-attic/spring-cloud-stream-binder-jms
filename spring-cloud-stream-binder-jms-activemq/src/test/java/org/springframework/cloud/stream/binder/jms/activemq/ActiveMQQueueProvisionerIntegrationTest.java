@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
@@ -64,7 +65,8 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 	@Before
 	public void setUp() throws Exception {
 		target = new ActiveMQQueueProvisioner(activeMQConnectionFactory,
-				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
+				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")),
+				new JmsBinderConfigurationProperties());
 	}
 
 	@Test
