@@ -26,7 +26,8 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.integration.dsl.jms.JmsMessageDrivenChannelAdapter;
@@ -43,6 +44,7 @@ import org.springframework.retry.support.RetryTemplate;
  *
  * @author José Carlos Valero
  * @author Gary Russell
+ * @author Ilayaperumal Gopinathan
  * @since 1.1
  */
 public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContextAware, BeanFactoryAware {
@@ -55,14 +57,10 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 
 	private ApplicationContext applicationContext;
 
-	private JmsBinderConfigurationProperties jmsBinderConfigurationProperties;
-
 	public JmsMessageDrivenChannelAdapterFactory(ListenerContainerFactory listenerContainerFactory,
-												 MessageRecoverer messageRecoverer,
-												 JmsBinderConfigurationProperties jmsBinderConfigurationProperties) {
+			MessageRecoverer messageRecoverer) {
 		this.listenerContainerFactory = listenerContainerFactory;
 		this.messageRecoverer = messageRecoverer;
-		this.jmsBinderConfigurationProperties = jmsBinderConfigurationProperties;
 	}
 
 	@Override
@@ -76,9 +74,9 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 	}
 
 	public JmsMessageDrivenChannelAdapter build(Queue destination,
-												final ConsumerProperties properties) {
+			final ExtendedConsumerProperties<JmsConsumerProperties> properties) {
 		RetryingChannelPublishingJmsMessageListener listener = new RetryingChannelPublishingJmsMessageListener(
-				properties, messageRecoverer, jmsBinderConfigurationProperties);
+				properties, messageRecoverer, properties.getExtension().getDlqName());
 		listener.setBeanFactory(this.beanFactory);
 		JmsMessageDrivenChannelAdapter adapter = new JmsMessageDrivenChannelAdapter(
 				listenerContainerFactory.build(destination), listener);
@@ -95,14 +93,12 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 
 		private final MessageRecoverer messageRecoverer;
 
-		private final JmsBinderConfigurationProperties jmsBinderConfigurationProperties;
+		private final String deadLetterQueueName;
 
-		RetryingChannelPublishingJmsMessageListener(ConsumerProperties properties,
-													MessageRecoverer messageRecoverer,
-													JmsBinderConfigurationProperties jmsBinderConfigurationProperties) {
+		RetryingChannelPublishingJmsMessageListener(ConsumerProperties properties, MessageRecoverer messageRecoverer, String deadLetterQueueName) {
 			this.properties = properties;
 			this.messageRecoverer = messageRecoverer;
-			this.jmsBinderConfigurationProperties = jmsBinderConfigurationProperties;
+			this.deadLetterQueueName = deadLetterQueueName;
 		}
 
 		@Override
@@ -136,7 +132,6 @@ public class JmsMessageDrivenChannelAdapterFactory implements ApplicationContext
 						public Object recover(RetryContext retryContext) throws Exception {
 							if (messageRecoverer != null) {
 								Message message = (Message) retryContext.getAttribute(RETRY_CONTEXT_MESSAGE_ATTRIBUTE);
-								String deadLetterQueueName = jmsBinderConfigurationProperties.getDeadLetterQueueName();
 								messageRecoverer.recover(message, deadLetterQueueName, retryContext.getLastThrowable());
 							}
 							else {

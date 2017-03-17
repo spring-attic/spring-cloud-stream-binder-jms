@@ -20,10 +20,14 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import org.springframework.cloud.stream.binder.AbstractBinderTests;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
+import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
@@ -31,7 +35,6 @@ import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandle
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
-import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
@@ -40,16 +43,14 @@ import org.springframework.jms.core.JmsTemplate;
  * @author Ilayaperumal Gopinathan
  * @author Gary Russell
  */
-public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder, ConsumerProperties,
-		ProducerProperties> {
+public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder, ExtendedConsumerProperties<JmsConsumerProperties>,
+		ExtendedProducerProperties<JmsProducerProperties>> {
 
 	@Override
 	protected ActiveMQTestBinder getBinder() throws Exception {
 		ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-		JmsBinderConfigurationProperties jmsBinderConfigurationProperties = new JmsBinderConfigurationProperties();
 		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory,
-				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")),
-				jmsBinderConfigurationProperties);
+				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
 		GenericApplicationContext applicationContext = new GenericApplicationContext();
 		applicationContext.refresh();
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
@@ -61,7 +62,7 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(jmsTemplate,
 				new DefaultJmsHeaderMapper());
 		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(
-				listenerContainerFactory, messageRecoverer, jmsBinderConfigurationProperties);
+				listenerContainerFactory, messageRecoverer);
 		jmsMessageDrivenChannelAdapterFactory.setApplicationContext(applicationContext);
 		jmsMessageDrivenChannelAdapterFactory.setBeanFactory(applicationContext.getBeanFactory());
 		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner,
@@ -74,13 +75,13 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 	}
 
 	@Override
-	protected ConsumerProperties createConsumerProperties() {
-		return new ConsumerProperties();
+	protected ExtendedConsumerProperties createConsumerProperties() {
+		return new ExtendedConsumerProperties(new JmsConsumerProperties());
 	}
 
 	@Override
-	protected ProducerProperties createProducerProperties() {
-		return new ProducerProperties();
+	protected ExtendedProducerProperties createProducerProperties() {
+		return new ExtendedProducerProperties(new JmsProducerProperties());
 	}
 
 	@Override

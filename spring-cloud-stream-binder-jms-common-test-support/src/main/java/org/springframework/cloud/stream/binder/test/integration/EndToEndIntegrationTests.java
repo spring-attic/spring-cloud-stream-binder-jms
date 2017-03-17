@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javax.jms.ConnectionFactory;
 
 import com.google.common.collect.ImmutableMap;
+import javax.jms.ConnectionFactory;
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -33,8 +33,9 @@ import org.junit.Test;
 import org.springframework.boot.Banner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication;
 import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication.Receiver;
@@ -83,7 +84,8 @@ public abstract class EndToEndIntegrationTests {
 	protected static final String RETRY_BACKOFF_50MS = "--spring.cloud.stream.bindings.input.consumer.backOffInitialInterval=50";
 	protected static final String RETRY_BACKOFF_1X = "--spring.cloud.stream.bindings.input.consumer.backOffMultiplier=1";
 	protected static final String REQUIRED_GROUPS_FORMAT = "--spring.cloud.stream.bindings.output.producer.requiredGroups=%s";
-	protected static final String DLQ = new JmsBinderConfigurationProperties().getDeadLetterQueueName();
+	protected static final String DLQ_NAME = "dlqtest";
+	protected static final String DLQ_CONSUMER_PROPERTY = "--spring.cloud.stream.jms.bindings.input.consumer.dlqName=" + DLQ_NAME;
 	protected final JmsTemplate jmsTemplate;
 	protected final ProvisioningProvider<ConsumerProperties, ProducerProperties> queueProvisioner;
 	protected String randomGroupArg1;
@@ -185,7 +187,7 @@ public abstract class EndToEndIntegrationTests {
 		List<Message> otherReceivedMessages = receiver2.getHandledMessages();
 		List<Message> messages = receiver.getHandledMessages();
 
-		assertThat(otherReceivedMessages.size(),  lessThan(messageCount));
+		assertThat(otherReceivedMessages.size(), lessThan(messageCount));
 		assertThat(messages.size(), lessThan(messageCount));
 	}
 
@@ -257,12 +259,14 @@ public abstract class EndToEndIntegrationTests {
 	@Test
 	public void scs_whenMessageIsSentToDLQ_stackTraceAddedToHeaders() throws Exception {
 		Sender sender = createSender();
-		createReceiver(randomGroupArg1, MAX_ATTEMPTS_1);
-		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ConsumerProperties());
+		createReceiver(randomGroupArg1, MAX_ATTEMPTS_1, DLQ_CONSUMER_PROPERTY);
+		JmsConsumerProperties jmsConsumerProperties = new JmsConsumerProperties();
+		jmsConsumerProperties.setDlqName(DLQ_NAME);
+		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ExtendedConsumerProperties<>(jmsConsumerProperties));
 
 		sender.send(Receiver.EXCEPTION_REQUEST);
 
-		javax.jms.Message message = jmsTemplate.receive(DLQ);
+		javax.jms.Message message = jmsTemplate.receive(DLQ_NAME);
 		assertThat(message, notNullValue());
 
 		String stacktrace = message.getStringProperty(
@@ -275,7 +279,7 @@ public abstract class EndToEndIntegrationTests {
 		Sender sender = createSender();
 		Receiver receiver = createReceiver(randomGroupArg1,
 				RETRY_BACKOFF_1X,
-				RETRY_BACKOFF_50MS);
+				RETRY_BACKOFF_50MS, DLQ_CONSUMER_PROPERTY);
 
 		sender.send(Receiver.EXCEPTION_REQUEST);
 
@@ -293,9 +297,11 @@ public abstract class EndToEndIntegrationTests {
 								Receiver.EXCEPTION_REQUEST));
 			}
 		});
-		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ConsumerProperties());
+		JmsConsumerProperties jmsConsumerProperties = new JmsConsumerProperties();
+		jmsConsumerProperties.setDlqName(DLQ_NAME);
+		queueProvisioner.provisionConsumerDestination(this.destination, randomGroupArg1, new ExtendedConsumerProperties<>(new JmsConsumerProperties()));
 
-		javax.jms.Message message = jmsTemplate.receive(DLQ);
+		javax.jms.Message message = jmsTemplate.receive(DLQ_NAME);
 		assertThat(message, notNullValue());
 	}
 
@@ -309,7 +315,7 @@ public abstract class EndToEndIntegrationTests {
 		Thread.sleep(500);
 		assertThat(receiver.getHandledMessages(), hasSize(0));
 
-		//we don't get a retry from the broker because we accept the message and DLQ it ourselves
+		//we don't get a retry from the broker because we accept the message and DLQ_NAME it ourselves
 		assertThat(receiver.getReceivedMessages(), hasSize(1));
 		assertThat(extractStringPayload(receiver.getReceivedMessages()),
 				contains(Receiver.EXCEPTION_REQUEST));
@@ -469,7 +475,7 @@ public abstract class EndToEndIntegrationTests {
 
 	private List<String> extractStringPayload(Iterable<Message> messages) {
 		List<String> output = new ArrayList<>();
-		for(Object o : extractPayload(messages)){
+		for (Object o : extractPayload(messages)) {
 			output.add(o.toString());
 		}
 		return output;
