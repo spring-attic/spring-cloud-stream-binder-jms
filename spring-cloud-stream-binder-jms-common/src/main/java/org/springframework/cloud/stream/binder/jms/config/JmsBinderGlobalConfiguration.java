@@ -21,8 +21,8 @@ import javax.jms.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.stream.binder.ConsumerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
@@ -48,10 +48,10 @@ import org.springframework.jms.core.JmsTemplate;
  * @author José Carlos Valero
  * @author Donovan Muller
  * @author Gary Russell
+ * @author Ilayaperumal Gopinathan
  * @since 1.1
  */
 @Configuration
-@EnableConfigurationProperties(JmsBinderConfigurationProperties.class)
 public class JmsBinderGlobalConfiguration {
 
 	@Autowired
@@ -75,9 +75,8 @@ public class JmsBinderGlobalConfiguration {
 
 	@Bean
 	public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(
-			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory,
-			JmsBinderConfigurationProperties jmsBinderConfigurationProperties) throws Exception {
-		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer, jmsBinderConfigurationProperties);
+			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory) throws Exception {
+		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer);
 	}
 
 	@Bean
@@ -94,22 +93,27 @@ public class JmsBinderGlobalConfiguration {
 
 
 	@Configuration
+	@EnableConfigurationProperties(JmsExtendedBindingProperties.class)
 	public static class JmsBinderConfiguration {
 
 		@Autowired
-		private ProvisioningProvider<ConsumerProperties, ProducerProperties> provisioningProvider;
+		private ProvisioningProvider<ExtendedConsumerProperties<JmsConsumerProperties>, ExtendedProducerProperties<JmsProducerProperties>> provisioningProvider;
 
 		@Autowired
 		private ConnectionFactory connectionFactory;
 
+		@Autowired
+		private JmsExtendedBindingProperties jmsExtendedBindingProperties;
+
 		@Bean
 		JMSMessageChannelBinder jmsMessageChannelBinder(Codec codec,
-														JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
-														JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory, JmsTemplate jmsTemplate) throws Exception {
+				JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
+				JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory, JmsTemplate jmsTemplate) throws Exception {
 
 			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(provisioningProvider,
 					jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory, jmsTemplate, connectionFactory);
 			jmsMessageChannelBinder.setCodec(codec);
+			jmsMessageChannelBinder.setExtendedBindingProperties(jmsExtendedBindingProperties);
 			return jmsMessageChannelBinder;
 		}
 

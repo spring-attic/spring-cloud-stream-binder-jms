@@ -28,9 +28,10 @@ import javax.jms.Topic;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.commons.lang.ArrayUtils;
 
-import org.springframework.cloud.stream.binder.ConsumerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
 import org.springframework.cloud.stream.binder.jms.provisioning.JmsConsumerDestination;
 import org.springframework.cloud.stream.binder.jms.provisioning.JmsProducerDestination;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
@@ -45,27 +46,24 @@ import org.springframework.jms.support.JmsUtils;
  * {@link ProvisioningProvider} for ActiveMQ.
  *
  * @author José Carlos Valero
+ * @author Ilayaperumal Gopinathan
  * @since 1.1
  */
 public class ActiveMQQueueProvisioner implements
-		ProvisioningProvider<ConsumerProperties, ProducerProperties> {
+		ProvisioningProvider<ExtendedConsumerProperties<JmsConsumerProperties>, ExtendedProducerProperties<JmsProducerProperties>> {
 
 	private final ActiveMQConnectionFactory connectionFactory;
 
 	private final DestinationNameResolver destinationNameResolver;
 
-	private final JmsBinderConfigurationProperties jmsBinderConfigurationProperties;
-
 	public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
-									DestinationNameResolver destinationNameResolver,
-									JmsBinderConfigurationProperties jmsBinderConfigurationProperties) {
+									DestinationNameResolver destinationNameResolver) {
 		this.connectionFactory = connectionFactory;
 		this.destinationNameResolver = destinationNameResolver;
-		this.jmsBinderConfigurationProperties = jmsBinderConfigurationProperties;
 	}
 
 	@Override
-	public ProducerDestination provisionProducerDestination(final String name, ProducerProperties properties) {
+	public ProducerDestination provisionProducerDestination(final String name, ExtendedProducerProperties<JmsProducerProperties> properties) {
 
 		Collection<DestinationNames> topicAndQueueNames =
 				this.destinationNameResolver.resolveTopicAndQueueNameForRequiredGroups(name, properties);
@@ -88,20 +86,20 @@ public class ActiveMQQueueProvisioner implements
 	}
 
 	@Override
-	public ConsumerDestination provisionConsumerDestination(String name, String group, ConsumerProperties properties) {
+	public ConsumerDestination provisionConsumerDestination(String name, String group, ExtendedConsumerProperties<JmsConsumerProperties> properties) {
 		String groupName = this.destinationNameResolver.resolveQueueNameForInputGroup(group, properties);
 		String topicName = this.destinationNameResolver.resolveQueueNameForInputGroup(name, properties);
 
 		provisionTopic(topicName);
 		final Queue queue = provisionConsumerGroup(topicName, groupName);
 
-		//DLQ
+		//DLQ_NAME
 		Session session;
 		Connection connection;
 		try {
 			connection = connectionFactory.createConnection();
 			session = connection.createSession(true, 1);
-			session.createQueue(jmsBinderConfigurationProperties.getDeadLetterQueueName());
+			session.createQueue(properties.getExtension().getDlqName());
 		}
 		catch (JMSException e) {
 			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
