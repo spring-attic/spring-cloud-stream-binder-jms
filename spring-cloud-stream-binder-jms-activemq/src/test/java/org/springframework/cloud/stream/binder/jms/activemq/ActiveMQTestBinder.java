@@ -16,14 +16,16 @@
 package org.springframework.cloud.stream.binder.jms.activemq;
 
 import org.springframework.cloud.stream.binder.AbstractTestBinder;
-import org.springframework.cloud.stream.binder.ConsumerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
 
 /**
  * @author Ilayaperumal Gopinathan
  */
-public class ActiveMQTestBinder extends AbstractTestBinder<JMSMessageChannelBinder, ConsumerProperties, ProducerProperties>{
+public class ActiveMQTestBinder extends AbstractTestBinder<JMSMessageChannelBinder, ExtendedConsumerProperties<JmsConsumerProperties>, ExtendedProducerProperties<JmsProducerProperties>> {
 
 	@Override
 	public void cleanup() {

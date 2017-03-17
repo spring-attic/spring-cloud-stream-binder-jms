@@ -17,7 +17,6 @@
 package org.springframework.cloud.stream.binder.jms.activemq.config;
 
 import javax.jms.ConnectionFactory;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -27,7 +26,6 @@ import org.springframework.boot.autoconfigure.jms.JndiConnectionFactoryAutoConfi
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.activemq.ActiveMQQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.config.JmsBinderAutoConfiguration;
-import org.springframework.cloud.stream.binder.jms.config.JmsBinderConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
 import org.springframework.context.annotation.Bean;
@@ -36,7 +34,7 @@ import org.springframework.context.annotation.Import;
 
 /**
  * ActiveMQ specific configuration.
- *
+ * <p>
  * Creates the connection factory and the infrastructure provisioner.
  *
  * @author José Carlos Valero
@@ -58,9 +56,8 @@ public class ActiveMQJmsConfiguration {
 
 	@Bean
 	ProvisioningProvider<?, ?> activeMqQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
-														DestinationNameResolver destinationNameResolver,
-														JmsBinderConfigurationProperties jmsBinderConfigurationProperties) {
-		return new ActiveMQQueueProvisioner(connectionFactory, destinationNameResolver, jmsBinderConfigurationProperties);
+			DestinationNameResolver destinationNameResolver) {
+		return new ActiveMQQueueProvisioner(connectionFactory, destinationNameResolver);
 	}
 
 }
