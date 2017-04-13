@@ -17,13 +17,12 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import java.util.concurrent.ConcurrentHashMap;
-import javax.jms.Topic;
 
-import org.apache.commons.lang.math.NumberUtils;
+import javax.jms.Topic;
 
 /**
  * @author José Carlos Valero
- * @since 20/08/16
+ * @author Donovan Muller
  */
 public class TopicPartitionRegistrar {
 	private static final Integer DEFAULT_TOPIC = -1;
@@ -51,7 +50,7 @@ public class TopicPartitionRegistrar {
 		if (partition instanceof String) {
 			return this.destinations.get(Integer.parseInt((String) partition));
 		}
-		if (NumberUtils.isDigits(partition.toString())) {
+		if (partition.toString().matches("\\d+")) {
 			return this.destinations.get(Integer.parseInt(partition.toString()));
 		}
 		throw new IllegalArgumentException(String.format("The provided partition '%s' is not a valid format", partition));
