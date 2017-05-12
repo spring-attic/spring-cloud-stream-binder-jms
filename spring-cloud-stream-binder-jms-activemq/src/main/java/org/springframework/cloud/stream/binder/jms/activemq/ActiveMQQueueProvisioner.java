@@ -16,162 +16,166 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
-import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.command.ActiveMQQueue;
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
 import org.springframework.cloud.stream.binder.jms.provisioning.JmsConsumerDestination;
 import org.springframework.cloud.stream.binder.jms.provisioning.JmsProducerDestination;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNames;
+import org.springframework.cloud.stream.binder.jms.utils.AnonymousNamingStrategy;
+import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.provisioning.ConsumerDestination;
 import org.springframework.cloud.stream.provisioning.ProducerDestination;
-import org.springframework.cloud.stream.provisioning.ProvisioningException;
 import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
-import org.springframework.jms.support.JmsUtils;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.SessionCallback;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
- * {@link ProvisioningProvider} for ActiveMQ.
+ * <p>
+ * Implementation of the {@link ProvisioningProvider} for Apache ActiveMQ.
+ * This provider will provision and set up necessary infrastructure
+ * (topics, queues, subscriptions etc) to support Spring Cloud Stream's "Grouping"
+ * and "Partitioning" within the capabilities available in AciveMQ.
+ * </p>
+ * <p>
+ * Grouping and Partitioning will be combining two approaches
+ * <ul>
+ * <li>
+ * 1. Partitioning is supported by topic-per-partition approach
+ * </li>
+ * <li>
+ * 2. Grouping is supported using Virtual Topic feature provided by ActiveMQ
+ *    (see <a href="http://activemq.apache.org/virtual-destinations.html">Virtual Topic</a>)
+ * </li>
+ * </ul>
+ * For example; Let's say you have 2 partitions and 2 groups ("grp1" and "grp2") for destination
+ * "myDest". In this case this provisioner will create
+ * <pre>
+ * Two topics:
+ * 		- VirtualTopic.myDest-1
+ * 		- VirtualTopic.myDest-2
+ * And 4 consumers
+ * 		- Consumer.grp1.VirtualTopic.myDest-1
+ * 		- Consumer.grp2.VirtualTopic.myDest-1
+ * 		- Consumer.grp1.VirtualTopic.myDest-2
+ * 		- Consumer.grp2.VirtualTopic.myDest-2
+ * </pre>
+ * It will also create all necessary subscriptions required to enable internal delegation from virtual
+ * topics to queues.
+ * </p>
  *
  * @author José Carlos Valero
  * @author Ilayaperumal Gopinathan
  * @author Donovan Muller
+ * @author Oleg Zhurakousky
  * @since 1.1
  */
 public class ActiveMQQueueProvisioner implements
 		ProvisioningProvider<ExtendedConsumerProperties<JmsConsumerProperties>, ExtendedProducerProperties<JmsProducerProperties>> {
 
-	private final ActiveMQConnectionFactory connectionFactory;
+	private static final AnonymousNamingStrategy ANONYMOUS_GROUP_NAME_GENERATOR = new Base64UrlNamingStrategy("anonymous");
 
-	private final DestinationNameResolver destinationNameResolver;
+	private final JmsTemplate jmsTemplate;
 
-	public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
-									DestinationNameResolver destinationNameResolver) {
-		this.connectionFactory = connectionFactory;
-		this.destinationNameResolver = destinationNameResolver;
+	public ActiveMQQueueProvisioner(ActiveMQConnectionFactory connectionFactory) {
+		Assert.notNull(connectionFactory, "'connectionFactory' must not be null");
+		this.jmsTemplate = new JmsTemplate(connectionFactory);
+		this.jmsTemplate.setSessionAcknowledgeMode(Session.AUTO_ACKNOWLEDGE);
 	}
 
+	/**
+	 * Will provision producer's topic(s) as well as consumer queues per each
+	 * required group (if any).
+	 * This operation will also establish active delegate subscriptions between
+	 * producer's topic(s) and queues for each required
+	 * group (see {@link #createDelegationSubscription(String, String)}
+	 * An active delegate subscription essentially means creation of a JMS subscriber
+	 * between virtual topic and physical queue from which consumers will be consuming
+	 * messages and is an ActiveMQ mechanism to establish PubSub consumer groups
+	 * (see http://activemq.apache.org/virtual-destinations.html).
+	 */
 	@Override
-	public ProducerDestination provisionProducerDestination(final String name, ExtendedProducerProperties<JmsProducerProperties> properties) {
-
-		Collection<DestinationNames> topicAndQueueNames =
-				this.destinationNameResolver.resolveTopicAndQueueNameForRequiredGroups(name, properties);
-
-		final Map<Integer, Topic> partitionTopics = new HashMap<>();
-
-		for (DestinationNames destinationNames : topicAndQueueNames) {
-			Topic topic = provisionTopic(destinationNames.getTopicName());
-			provisionConsumerGroup(destinationNames.getTopicName(),
-					destinationNames.getGroupNames());
-
-			if (destinationNames.getPartitionIndex() != null) {
-				partitionTopics.put(destinationNames.getPartitionIndex(), topic);
-			}
-			else {
-				partitionTopics.put(-1, topic);
+	public ProducerDestination provisionProducerDestination(String topicName, ExtendedProducerProperties<JmsProducerProperties> producerProperties) {
+		String baseTopicName = this.generateVirtualTopicName(topicName);
+		String[] virtualTopicNames = new String[producerProperties.getPartitionCount()];
+		if (producerProperties.isPartitioned()) {
+			for (int i = 0; i < producerProperties.getPartitionCount(); i++) {
+				virtualTopicNames[i] = baseTopicName + "-" + i;
 			}
 		}
+		else {
+			virtualTopicNames[0] = baseTopicName;
+		}
+
+		String[] requiredGroups = producerProperties.getRequiredGroups() == null ? new String[]{} : producerProperties.getRequiredGroups();
+		List<Topic> partitionTopics = new ArrayList<>();
+		for (String virtualTopicName : virtualTopicNames) {
+			for (String requiredGroupName : requiredGroups) {
+				// create subscription for each required group
+				this.createDelegationSubscription(requiredGroupName, virtualTopicName);
+			}
+			partitionTopics.add(this.provisionTopic(virtualTopicName));
+		}
+
 		return new JmsProducerDestination(partitionTopics);
 	}
 
 	@Override
-	public ConsumerDestination provisionConsumerDestination(String name, String group, ExtendedConsumerProperties<JmsConsumerProperties> properties) {
-		String groupName = this.destinationNameResolver.resolveQueueNameForInputGroup(group, properties);
-		String topicName = this.destinationNameResolver.resolveQueueNameForInputGroup(name, properties);
+	public ConsumerDestination provisionConsumerDestination(String topicName, String groupName, ExtendedConsumerProperties<JmsConsumerProperties> properties) {
+		if (!StringUtils.hasText(groupName)){
+			groupName = ANONYMOUS_GROUP_NAME_GENERATOR.generateName();
+		}
+		if (properties.isPartitioned()){
+			topicName += "-" + properties.getInstanceIndex();
+  		}
 
-		provisionTopic(topicName);
-		final Queue queue = provisionConsumerGroup(topicName, groupName);
+		Queue queue = this.createDelegationSubscription(groupName, this.generateVirtualTopicName(topicName));
 
-		//DLQ_NAME
-		Session session;
-		Connection connection;
-		try {
-			connection = connectionFactory.createConnection();
-			session = connection.createSession(true, 1);
-			session.createQueue(properties.getExtension().getDlqName());
-		}
-		catch (JMSException e) {
-			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
-		}
-		try {
-			JmsUtils.commitIfNecessary(session);
-		}
-		catch (JMSException e) {
-			throw new ProvisioningException("Provisioning failed", JmsUtils.convertJmsAccessException(e));
-		}
-		finally {
-			JmsUtils.closeSession(session);
-			JmsUtils.closeConnection(connection);
-		}
 		return new JmsConsumerDestination(queue);
 	}
 
-	private Topic provisionTopic(String topicName) {
-		Connection activeMQConnection;
-		Session session;
-		Topic topic;
-		try {
-			activeMQConnection = connectionFactory.createConnection();
-			session = activeMQConnection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
-			topic = session.createTopic(String.format("VirtualTopic.%s", topicName));
-
-			JmsUtils.commitIfNecessary(session);
-			JmsUtils.closeSession(session);
-			JmsUtils.closeConnection(activeMQConnection);
-		}
-		catch (JMSException e) {
-			throw new IllegalStateException(e);
-		}
-		return topic;
+	/**
+	 * Creates a delegating subscription between 'virtual topic' and 'queue'
+	 * from which messages are going to be consumed.
+	 * This is required by AcyiveMQ broker to setup the actual active subscription
+	 * which will forward messages from virtual topic to queue.
+	 * For more details please see http://activemq.apache.org/virtual-destinations.html and
+	 * https://github.com/apache/activemq/blob/master/activemq-unit-tests/src/test/java/org/apache/activemq/broker/virtual/VirtualTopicSelectorTest.java
+	 */
+	private Queue createDelegationSubscription(final String groupName, final String topicName){
+		return this.jmsTemplate.execute(new SessionCallback<Queue>() {
+			@Override
+			public Queue doInJms(Session session) throws JMSException {
+				String queueName = "Consumer." + groupName + "." + topicName;
+				Queue queue = new ActiveMQQueue(queueName);
+				session.createConsumer(queue);
+				return queue;
+			}
+		});
 	}
 
-	private Queue provisionConsumerGroup(String topicName, String... consumerGroupName) {
-		Connection activeMQConnection;
-		Session session;
-		Queue[] groups = null;
-		try {
-			activeMQConnection = connectionFactory.createConnection();
-			session = activeMQConnection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
-			if (consumerGroupName != null && consumerGroupName.length > 0) {
-				groups = new Queue[consumerGroupName.length];
-				for (int i = 0; i < consumerGroupName.length; i++) {
-					/*
-					 * By default, ActiveMQ consumer queues are named 'Consumer.*.VirtualTopic.',
-					 * therefore we must remove '.' from the consumer group name if present.
-					 * For example, anonymous consumer groups are named 'anonymous.*' by default.
-					 */
-					groups[i] = createQueue(topicName, session, consumerGroupName[i].replaceAll("\\.", "_"));
-				}
+	private Topic provisionTopic(final String topicName) {
+		return this.jmsTemplate.execute(new SessionCallback<Topic>() {
+			@Override
+			public Topic doInJms(Session session) throws JMSException {
+				return session.createTopic(topicName);
 			}
-
-			JmsUtils.commitIfNecessary(session);
-			JmsUtils.closeSession(session);
-			JmsUtils.closeConnection(activeMQConnection);
-			if (groups != null) {
-				return groups[0];
-			}
-		}
-		catch (JMSException e) {
-			throw new IllegalStateException(e);
-		}
-		return null;
+		});
 	}
 
-	private Queue createQueue(String topicName, Session session, String consumerName) throws JMSException {
-		Queue queue = session.createQueue(String.format("Consumer.%s.VirtualTopic.%s", consumerName, topicName));
-		//TODO: Understand why a producer is required to actually create the queue, it's not mentioned in ActiveMQ docs
-		session.createProducer(queue).close();
-		return queue;
+	private String generateVirtualTopicName(String topicName){
+		return "VirtualTopic." + topicName;
 	}
 }

@@ -17,11 +17,8 @@
 package org.springframework.cloud.stream.binder.jms.activemq.integration;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-
 import org.springframework.cloud.stream.binder.jms.activemq.ActiveMQQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
-import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 
 /**
  * @author José Carlos Valero
@@ -40,8 +37,7 @@ public class EndToEndIntegrationTests extends org.springframework.cloud.stream.b
 
 	public EndToEndIntegrationTests() throws Exception {
 		super(
-				new ActiveMQQueueProvisioner(connectionFactory,
-						new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."))),
+				new ActiveMQQueueProvisioner(connectionFactory),
 				connectionFactory
 		);
 	}

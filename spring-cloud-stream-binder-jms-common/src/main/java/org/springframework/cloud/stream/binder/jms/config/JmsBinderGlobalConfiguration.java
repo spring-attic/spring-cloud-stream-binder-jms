@@ -24,8 +24,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
-import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
 import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
@@ -49,6 +47,7 @@ import org.springframework.jms.core.JmsTemplate;
  * @author Donovan Muller
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
+ * @author Oleg Zhurakousky
  * @since 1.1
  */
 @Configuration
@@ -56,11 +55,6 @@ public class JmsBinderGlobalConfiguration {
 
 	@Autowired
 	private ConnectionFactory connectionFactory;
-
-	@Bean
-	public DestinationNameResolver queueNameResolver() throws Exception {
-		return new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."));
-	}
 
 	@Bean
 	@ConditionalOnMissingBean(MessageRecoverer.class)

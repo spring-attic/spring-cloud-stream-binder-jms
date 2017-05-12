@@ -245,10 +245,12 @@ public abstract class EndToEndIntegrationTests {
 		String group42 = getRandomName("group42");
 		Sender sender = createSender(String.format(REQUIRED_GROUPS_FORMAT, group42));
 
-		sender.send(MESSAGE_TEXTS[2]);
+
 
 		Receiver receiver = createReceiver(String.format(INPUT_GROUP_FORMAT, group42));
 		final List<Message> messages = receiver.getHandledMessages();
+
+		sender.send(MESSAGE_TEXTS[2]);
 
 
 		waitFor(new Runnable() {
@@ -378,9 +380,7 @@ public abstract class EndToEndIntegrationTests {
 		);
 
 		int messageCount = 39;
-		for (int i = 0; i < messageCount; i++) {
-			sender.send(i);
-		}
+
 
 		Receiver receiverPartition0 = createReceiver(
 				String.format(INPUT_GROUP_FORMAT, group66),
@@ -394,6 +394,10 @@ public abstract class EndToEndIntegrationTests {
 				String.format("--spring.cloud.stream.instance-count=%s", 2),
 				String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
 		);
+
+		for (int i = 0; i < messageCount; i++) {
+			sender.send(i);
+		}
 
 		final List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
 		final List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
