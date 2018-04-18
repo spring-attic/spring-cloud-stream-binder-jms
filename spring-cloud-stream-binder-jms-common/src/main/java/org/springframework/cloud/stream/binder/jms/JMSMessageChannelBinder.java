@@ -80,27 +80,30 @@ public class JMSMessageChannelBinder
 		this.extendedBindingProperties = extendedBindingProperties;
 	}
 
-
 	@Override
 	protected MessageHandler createProducerMessageHandler(ProducerDestination producerDestination,
-			ExtendedProducerProperties<JmsProducerProperties> producerProperties) throws Exception {
-		TopicPartitionRegistrar topicPartitionRegistrar = new TopicPartitionRegistrar();
-		Session session = connectionFactory.createConnection().createSession(true, 1);
+			ExtendedProducerProperties<JmsProducerProperties> jmsProducerPropertiesExtendedProducerProperties,
+			MessageChannel messageChannel) throws Exception {
 
-		if (producerProperties.isPartitioned()) {
-			int partitionCount = producerProperties.getPartitionCount();
-			for (int i = 0; i < partitionCount; ++i) {
-				String destination = producerDestination.getNameForPartition(i);
-				Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
-				topicPartitionRegistrar.addDestination(i, topic);
-			}
-		}
-		else {
-			String destination = producerDestination.getName();
-			Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
-			topicPartitionRegistrar.addDestination(-1, topic);
-		}
-		return this.jmsSendingMessageHandlerFactory.build(topicPartitionRegistrar);
+	    // TODO: whats a messagechannel lol
+
+        TopicPartitionRegistrar topicPartitionRegistrar = new TopicPartitionRegistrar();
+        Session session = connectionFactory.createConnection().createSession(true, 1);
+
+        if (jmsProducerPropertiesExtendedProducerProperties.isPartitioned()) {
+            int partitionCount = jmsProducerPropertiesExtendedProducerProperties.getPartitionCount();
+            for (int i = 0; i < partitionCount; ++i) {
+                String destination = producerDestination.getNameForPartition(i);
+                Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
+                topicPartitionRegistrar.addDestination(i, topic);
+            }
+        }
+        else {
+            String destination = producerDestination.getName();
+            Topic topic = (Topic) destinationResolver.resolveDestinationName(session, destination, true);
+            topicPartitionRegistrar.addDestination(-1, topic);
+        }
+        return this.jmsSendingMessageHandlerFactory.build(topicPartitionRegistrar);
 	}
 
 	@Override
