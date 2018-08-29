@@ -5,10 +5,9 @@ spring:
   # Necessary for org.springframework.cloud.stream.binder.jms.integration testing multiple ApplicationContexts.
   jmx:
     enabled: false
-
+  activemq:
+    broker-url: tcp://localhost:44029
+    user:
+    password:
 
 debug: false
-activemq:
-  host: tcp://localhost:44029
-  username:
-  password:

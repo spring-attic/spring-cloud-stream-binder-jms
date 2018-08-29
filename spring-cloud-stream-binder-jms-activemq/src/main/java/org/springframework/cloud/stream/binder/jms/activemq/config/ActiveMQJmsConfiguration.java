@@ -17,11 +17,8 @@
 package org.springframework.cloud.stream.binder.jms.activemq.config;
 
 import javax.jms.ConnectionFactory;
-import org.apache.activemq.ActiveMQConnectionFactory;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.jms.activemq.ActiveMQQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
@@ -39,18 +36,11 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.1
  */
 @Configuration
-@ConditionalOnClass({ConnectionFactory.class, ActiveMQConnectionFactory.class})
-@EnableConfigurationProperties(ActiveMQConfigurationProperties.class)
+@ConditionalOnClass({ConnectionFactory.class})
 public class ActiveMQJmsConfiguration {
 
 	@Bean
-	@ConditionalOnMissingBean(ConnectionFactory.class)
-	public ActiveMQConnectionFactory connectionFactory(ActiveMQConfigurationProperties config) {
-		return new ActiveMQConnectionFactory(config.getUsername(), config.getPassword(), config.getHost());
-	}
-
-	@Bean
-	ProvisioningProvider<?, ?> activeMqQueueProvisioner(ActiveMQConnectionFactory connectionFactory,
+	ProvisioningProvider<?, ?> activeMqQueueProvisioner(ConnectionFactory connectionFactory,
 			DestinationNameResolver destinationNameResolver) {
 		return new ActiveMQQueueProvisioner(connectionFactory, destinationNameResolver);
 	}
