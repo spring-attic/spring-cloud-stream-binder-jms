@@ -26,7 +26,7 @@ import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
-import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
+import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenEndpointFactory;
 import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
@@ -35,7 +35,7 @@ import org.springframework.cloud.stream.binder.jms.utils.SpecCompliantJmsHeaderM
 import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.integration.codec.Codec;
+import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 
 /**
@@ -49,6 +49,7 @@ import org.springframework.jms.core.JmsTemplate;
  * @author Donovan Muller
  * @author Gary Russell
  * @author Ilayaperumal Gopinathan
+ * @author Tim Ysewyn
  * @since 1.1
  */
 @Configuration
@@ -58,39 +59,38 @@ public class JmsBinderGlobalConfiguration {
 	private ConnectionFactory connectionFactory;
 
 	@Bean
-	public DestinationNameResolver queueNameResolver() throws Exception {
+	public DestinationNameResolver queueNameResolver() {
 		return new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."));
 	}
 
 	@Bean
-	@ConditionalOnMissingBean(MessageRecoverer.class)
-	MessageRecoverer defaultMessageRecoverer() throws Exception {
-		return new RepublishMessageRecoverer(jmsTemplate(), new SpecCompliantJmsHeaderMapper());
+	@ConditionalOnMissingBean
+	MessageRecoverer defaultMessageRecoverer(JmsTemplate jmsTemplate, JmsHeaderMapper jmsHeaderMapper) {
+		return new RepublishMessageRecoverer(jmsTemplate, jmsHeaderMapper);
 	}
 
 	@Bean
-	ListenerContainerFactory listenerContainerFactory() throws Exception {
-		return new ListenerContainerFactory(connectionFactory);
+	ListenerContainerFactory listenerContainerFactory() {
+		return new ListenerContainerFactory(this.connectionFactory);
 	}
 
 	@Bean
-	public JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory(
-			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory) throws Exception {
-		return new JmsMessageDrivenChannelAdapterFactory(listenerContainerFactory, messageRecoverer);
+	public JmsMessageDrivenEndpointFactory jmsMessageDrivenChannelAdapterFactory(
+			MessageRecoverer messageRecoverer, ListenerContainerFactory listenerContainerFactory, JmsHeaderMapper jmsHeaderMapper) {
+		return new JmsMessageDrivenEndpointFactory(listenerContainerFactory, messageRecoverer, jmsHeaderMapper);
 	}
 
 	@Bean
-	@ConditionalOnMissingBean(JmsSendingMessageHandlerFactory.class)
-	public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory() throws Exception {
-		return new JmsSendingMessageHandlerFactory(jmsTemplate(), new SpecCompliantJmsHeaderMapper());
+	@ConditionalOnMissingBean
+	public JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory(JmsTemplate jmsTemplate, JmsHeaderMapper jmsHeaderMapper) {
+		return new JmsSendingMessageHandlerFactory(jmsTemplate, jmsHeaderMapper);
 	}
 
 	@Bean
-	@ConditionalOnMissingBean(JmsTemplate.class)
-	public JmsTemplate jmsTemplate() throws Exception {
-		return new JmsTemplate(connectionFactory);
+	@ConditionalOnMissingBean
+	public JmsHeaderMapper jmsHeaderMapper() {
+		return new SpecCompliantJmsHeaderMapper();
 	}
-
 
 	@Configuration
 	@EnableConfigurationProperties(JmsExtendedBindingProperties.class)
@@ -106,14 +106,13 @@ public class JmsBinderGlobalConfiguration {
 		private JmsExtendedBindingProperties jmsExtendedBindingProperties;
 
 		@Bean
-		JMSMessageChannelBinder jmsMessageChannelBinder(Codec codec,
-				JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory,
-				JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory, JmsTemplate jmsTemplate) throws Exception {
+		JMSMessageChannelBinder jmsMessageChannelBinder(
+				JmsMessageDrivenEndpointFactory jmsMessageDrivenEndpointFactory,
+				JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory, JmsTemplate jmsTemplate) {
 
-			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(provisioningProvider,
-					jmsSendingMessageHandlerFactory, jmsMessageDrivenChannelAdapterFactory, jmsTemplate, connectionFactory);
-			jmsMessageChannelBinder.setCodec(codec);
-			jmsMessageChannelBinder.setExtendedBindingProperties(jmsExtendedBindingProperties);
+			JMSMessageChannelBinder jmsMessageChannelBinder = new JMSMessageChannelBinder(this.provisioningProvider,
+					jmsSendingMessageHandlerFactory, jmsMessageDrivenEndpointFactory, jmsTemplate, this.connectionFactory);
+			jmsMessageChannelBinder.setExtendedBindingProperties(this.jmsExtendedBindingProperties);
 			return jmsMessageChannelBinder;
 		}
 

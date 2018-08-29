@@ -17,7 +17,6 @@
 package org.springframework.cloud.stream.binder.jms.utils;
 
 import javax.jms.Destination;
-import javax.jms.JMSException;
 
 import org.springframework.cloud.stream.binder.BinderHeaders;
 import org.springframework.context.Lifecycle;
@@ -25,7 +24,6 @@ import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.integration.jms.JmsSendingMessageHandler;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.core.MessagePostProcessor;
 import org.springframework.messaging.Message;
 
 /**
@@ -37,6 +35,7 @@ import org.springframework.messaging.Message;
  *
  * @author José Carlos Valero
  * @author Donovan Muller
+ * @author Tim Ysewyn
  * @since 1.1
  */
 public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandler implements Lifecycle {
@@ -55,34 +54,20 @@ public class PartitionAwareJmsSendingMessageHandler extends AbstractMessageHandl
 		this.headerMapper = headerMapper;
 	}
 
+	@Override
 	protected void handleMessageInternal(Message<?> message) throws Exception {
-		if(message == null) {
+		if (message == null) {
 			throw new IllegalArgumentException("message must not be null");
 		}
-		Object destination = this.determineDestination(message);
-		Object objectToSend = message.getPayload();
-		HeaderMappingMessagePostProcessor messagePostProcessor = new HeaderMappingMessagePostProcessor(message, this.headerMapper);
-
-		this.jmsTemplate.convertAndSend((Destination)destination, objectToSend, messagePostProcessor);
+		Destination destination = this.determineDestination(message);
+		this.jmsTemplate.convertAndSend(destination, message.getPayload(), (jmsMessage) -> {
+			this.headerMapper.fromHeaders(message.getHeaders(), jmsMessage);
+			return jmsMessage;
+		});
 	}
 
 	private Destination determineDestination(Message<?> message) {
 		return destinations.getDestination(message.getHeaders().get(BinderHeaders.PARTITION_HEADER));
-	}
-
-	private static final class HeaderMappingMessagePostProcessor implements MessagePostProcessor {
-		private final Message<?> integrationMessage;
-		private final JmsHeaderMapper headerMapper;
-
-		private HeaderMappingMessagePostProcessor(Message<?> integrationMessage, JmsHeaderMapper headerMapper) {
-			this.integrationMessage = integrationMessage;
-			this.headerMapper = headerMapper;
-		}
-
-		public javax.jms.Message postProcessMessage(javax.jms.Message jmsMessage) throws JMSException {
-			this.headerMapper.fromHeaders(this.integrationMessage.getHeaders(), jmsMessage);
-			return jmsMessage;
-		}
 	}
 
 	/*

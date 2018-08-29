@@ -23,44 +23,52 @@ import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.store.PersistenceAdapter;
 import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 
+import javax.jms.ConnectionFactory;
+
 /**
  * Provides ActiveMQ related utilities.
  *
  * @author José Carlos Valero
+ * @author Tim Ysewyn
  * @since 1.1
  */
-public abstract class ActiveMQTestUtils {
+public class ActiveMQTestUtils {
 
-	private static BrokerService broker;
+	private BrokerService broker;
 
-	public static ActiveMQConnectionFactory startEmbeddedActiveMQServer() throws Exception {
-		createBroker();
-		return new ActiveMQConnectionFactory(broker.getTransportConnectors().get(0).getConnectUri().toString());
+	public ActiveMQTestUtils() {
+		startEmbeddedActiveMQServer();
 	}
 
-	public static void stopEmbeddedActiveMQServer() throws Exception {
-		broker.stop();
+	public ConnectionFactory getConnectionFactory() throws Exception {
+		startEmbeddedActiveMQServer();
+		return new ActiveMQConnectionFactory(broker.getTransportConnectors().get(0).getConnectUri());
 	}
 
-	private static void createBroker() throws Exception {
-		synchronized (ActiveMQTestUtils.class){
-			if(broker == null){
-				broker = new BrokerService();
-				File testDataDir = new File("target/activemq-data/tests");
-				broker.setDataDirectoryFile(testDataDir);
-				broker.setUseJmx(true);
-				broker.setDeleteAllMessagesOnStartup(true);
-				PersistenceAdapter persistenceAdapter = new KahaDBPersistenceAdapter();
-				persistenceAdapter.setDirectory(new File(testDataDir, "kahadb"));
-				broker.setPersistenceAdapter(persistenceAdapter);
-				broker.addConnector("tcp://localhost:44029");
-				broker.start();
-				broker.waitUntilStarted();
-			}else {
-				return;
+	private void startEmbeddedActiveMQServer() {
+		synchronized (this) {
+			if (broker == null) {
+				try {
+					broker = new BrokerService();
+					File testDataDir = new File("target/activemq-data/tests");
+					broker.setDataDirectoryFile(testDataDir);
+					broker.setUseJmx(true);
+					broker.setDeleteAllMessagesOnStartup(true);
+					PersistenceAdapter persistenceAdapter = new KahaDBPersistenceAdapter();
+					persistenceAdapter.setDirectory(new File(testDataDir, "kahadb"));
+					broker.setPersistenceAdapter(persistenceAdapter);
+					broker.addConnector("tcp://localhost:44029");
+					broker.start();
+					broker.waitUntilStarted();
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
 			}
 		}
+	}
 
+	public void stopEmbeddedActiveMQServer() throws Exception {
+		broker.stop();
 	}
 
 }

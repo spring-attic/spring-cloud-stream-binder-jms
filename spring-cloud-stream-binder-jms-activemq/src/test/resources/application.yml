@@ -9,6 +9,6 @@ spring:
 
 debug: false
 activemq:
-  host: localhost:44029
+  host: tcp://localhost:44029
   username:
   password:

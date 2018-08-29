@@ -16,25 +16,26 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq;
 
-import java.util.Map;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.hamcrest.Matchers;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
+
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -42,9 +43,9 @@ import static org.junit.Assert.assertThat;
 
 public class RepublishMessageRecovererTests {
 
-	public static final String DEAD_LETTER_QUEUE = "dead-letter-queue";
+	private static final String DEAD_LETTER_QUEUE = "dead-letter-queue";
+	private static ActiveMQTestUtils activeMQTestUtils;
 	static RepublishMessageRecoverer target;
-	static RepublishMessageRecoverer additionalHeadersTarget;
 	static JmsTemplate jmsTemplate;
 	private Message message = createMessage(ImmutableMap.of("fancy", "header"));
 	private final String exceptionMessage = "I am an unhappy exception";
@@ -52,29 +53,22 @@ public class RepublishMessageRecovererTests {
 
 	@BeforeClass
 	public static void initTests() throws Exception {
-		ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
+		activeMQTestUtils = new ActiveMQTestUtils();
+		ConnectionFactory connectionFactory = activeMQTestUtils.getConnectionFactory();
 
 		jmsTemplate = new JmsTemplate(connectionFactory);
 		jmsTemplate.setDefaultDestinationName("my-fancy-queue");
-		target = new RepublishMessageRecoverer(jmsTemplate, new DefaultJmsHeaderMapper());
-		additionalHeadersTarget = new AdditionalHeadersMessageRecoverer(jmsTemplate);
 	}
 
 	@Before
-	public void setUp() throws Exception {
-//		Mockito.reset(queueProvisioner);
-//		when(consumerDestination.getDlq()).thenReturn(DEAD_LETTER_QUEUE);
+	public void setUp() {
+		target = new RepublishMessageRecoverer(jmsTemplate, new DefaultJmsHeaderMapper());
 	}
 
-//	@Test
-//	public void recover_provisionsDeadLetterQueue() throws Exception {
-//		target.recover(createMessage(ImmutableMap.of("fancy", "header")),DEAD_LETTER_QUEUE, cause);
-//		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
-//
-//		verify(consumerDestination, times(1)).getDlq();
-//	}
-
-
+	@AfterClass
+	public static void teardownTests() throws Exception {
+		activeMQTestUtils.stopEmbeddedActiveMQServer();
+	}
 
 	@Test
 	public void recover_addsStacktraceToMessageHeaders() throws Exception {
@@ -129,6 +123,7 @@ public class RepublishMessageRecovererTests {
 
 	@Test
 	public void recover_whenAdditionalHeadersMethodProvided_addsDefinedHeaders() throws Exception {
+		RepublishMessageRecoverer additionalHeadersTarget = new AdditionalHeadersMessageRecoverer(jmsTemplate);
 		additionalHeadersTarget.recover(message, DEAD_LETTER_QUEUE, cause);
 		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 

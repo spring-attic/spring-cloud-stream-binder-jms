@@ -23,15 +23,17 @@ import java.util.concurrent.CountDownLatch;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jmx.JmxAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFactoryCustomizerAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Sink;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 
-@SpringBootApplication(exclude = {EmbeddedServletContainerAutoConfiguration.class, WebMvcAutoConfiguration.class, JmxAutoConfiguration.class})
+@SpringBootApplication(exclude = {EmbeddedWebServerFactoryCustomizerAutoConfiguration.class, WebMvcAutoConfiguration.class, JmxAutoConfiguration.class})
 @EnableBinding(Sink.class)
 public class ReceiverApplication {
 
@@ -45,16 +47,16 @@ public class ReceiverApplication {
 		public static final String EXCEPTION_REQUEST = "Please throw an exception";
 		public static final String REQUESTED_EXCEPTION = "Here you go";
 
-		private final List<Message> handledMessages = new ArrayList<>();
+		private final List<Message<Object>> handledMessages = new ArrayList<>();
 
-		private final List<Message> receivedMessages = new ArrayList<>();
+		private final List<Message<Object>> receivedMessages = new ArrayList<>();
 		private CountDownLatch latch;
 
 		@StreamListener(Sink.INPUT)
-		public void receive(Message message) {
+		public void receive(Message<Object> message) {
 			receivedMessages.add(message);
 
-			Object payload = message.getPayload();
+			Object payload = extractPayload(message);
 			if (payload.equals(EXCEPTION_REQUEST)) {
 				throw new RuntimeException(REQUESTED_EXCEPTION);
 			}
@@ -69,12 +71,23 @@ public class ReceiverApplication {
 			this.latch = latch;
 		}
 
-		public List<Message> getHandledMessages() {
+		public List<Message<Object>> getHandledMessages() {
 			return handledMessages;
 		}
 
-		public List<Message> getReceivedMessages() {
+		public List<Message<Object>> getReceivedMessages() {
 			return receivedMessages;
+		}
+
+		private Object extractPayload(Message<Object> message) {
+			Object o = message.getPayload();
+			MimeType contentType = (MimeType) message.getHeaders().get("contentType");
+			if (MimeTypeUtils.APPLICATION_JSON.equals(contentType)
+				|| MimeTypeUtils.TEXT_PLAIN.equals(contentType)) {
+				return new String((byte[]) o);
+			} else {
+				return o;
+			}
 		}
 	}
 }

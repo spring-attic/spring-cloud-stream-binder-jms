@@ -16,49 +16,58 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq;
 
-import javax.jms.Queue;
-import javax.jms.Session;
-import javax.jms.Topic;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
+import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
-import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.provisioning.ConsumerDestination;
 import org.springframework.cloud.stream.provisioning.ProducerDestination;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.destination.DestinationResolver;
 
+import javax.jms.ConnectionFactory;
+import javax.jms.Queue;
+import javax.jms.Session;
+import javax.jms.Topic;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author José Carlos Valero
+ * @author Tim Ysewyn
  * @since 1.1
  */
 public class ActiveMQQueueProvisionerIntegrationTest {
 
+	private static ActiveMQTestUtils activeMQTestUtils;
+	private static ConnectionFactory activeMQConnectionFactory;
 	private static JmsTemplate jmsTemplate;
 	private static ActiveMQQueueProvisioner target;
-	private static ActiveMQConnectionFactory activeMQConnectionFactory;
 
 	@BeforeClass
 	public static void initTests() throws Exception {
-		activeMQConnectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
+		activeMQTestUtils = new ActiveMQTestUtils();
+		activeMQConnectionFactory = activeMQTestUtils.getConnectionFactory();
 		jmsTemplate = new JmsTemplate(activeMQConnectionFactory);
 	}
 
 	@Before
-	public void setUp() throws Exception {
+	public void setUp() {
 		target = new ActiveMQQueueProvisioner(activeMQConnectionFactory,
 				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
+	}
+
+	@AfterClass
+	public static void teardownTests() throws Exception {
+		activeMQTestUtils.stopEmbeddedActiveMQServer();
 	}
 
 	@Test
