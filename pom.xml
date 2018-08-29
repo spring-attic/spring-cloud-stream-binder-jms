@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <spring-cloud-stream.version>2.1.0.BUILD-SNAPSHOT</spring-cloud-stream.version>
+        <spring-cloud-stream-dependencies.version>Fishtown.BUILD-SNAPSHOT</spring-cloud-stream-dependencies.version>
     </properties>
 
     <modules>
@@ -57,16 +57,10 @@
 
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-stream</artifactId>
-                <version>${spring-cloud-stream.version}</version>
-            </dependency>
-
-            <!-- Test dependencies-->
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-stream-binder-test</artifactId>
-                <version>${spring-cloud-stream.version}</version>
-                <scope>test</scope>
+                <artifactId>spring-cloud-stream-dependencies</artifactId>
+                <version>${spring-cloud-stream-dependencies.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
