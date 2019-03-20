@@ -11,7 +11,7 @@ This binder is currently in alpha, bugs are expected.
 
 JMS supports both point-to-point messaging using its [`Queue`](https://docs.oracle.com/javaee/6/api/javax/jms/Queue.html) abstraction, and
 publish-subscribe messaging using [`Topic`](https://docs.oracle.com/javaee/6/api/javax/jms/Topic.html). However, neither of these patterns
-maps fully onto the SCS model of [persistent publish-subscribe with consumer groups](http://docs.spring.io/spring-cloud-stream/docs/current/reference/htmlsingle/#_persistent_publish_subscribe_support)
+maps fully onto the SCS model of [persistent publish-subscribe with consumer groups](https://docs.spring.io/spring-cloud-stream/docs/current/reference/htmlsingle/#_persistent_publish_subscribe_support)
 
 JMS also does not support provisioning of queues and topics, whereas in SCS queues are created if required whenever they declared.
 
@@ -29,9 +29,9 @@ For more details, see the documentation for the individual broker support sub-mo
 Together with the root SPI the Spring Cloud Stream JMS module provides an implementation
 for:
 
-1. [Solace](http://www.solacesystems.com/products/jms-messaging) based on the Java proprietary Solace API.
-2. [ActiveMQ](http://activemq.apache.org/) based on Virtual Destinations, a JMS compatible feature following certain naming conventions.
-3. [IBM&reg; MQ&reg;](http://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](http://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM&reg; MQ&reg; installation.
+1. [Solace](https://www.solacesystems.com/products/jms-messaging) based on the Java proprietary Solace API.
+2. [ActiveMQ](https://activemq.apache.org/) based on Virtual Destinations, a JMS compatible feature following certain naming conventions.
+3. [IBM&reg; MQ&reg;](https://www-03.ibm.com/software/products/en/ibm-mq) based on the Java proprietary libraries ([PCF](https://www.ibm.com/support/knowledgecenter/SSFKSJ_8.0.0/com.ibm.mq.dev.doc/q030980_.htm)) provided with an IBM&reg; MQ&reg; installation.
 
 ### Implementing new JMS providers
 
@@ -39,7 +39,7 @@ Before starting with a new JMS implementation, it is important to clarify that a
 should be provided by the vendor, enabling the provisioning of infrastructure at runtime. Additionally,
 SCS expects mixed topologies of topic-queues. i.e. Ideally, your vendor allows queues being subscribed
 to topics, so you can get groups of competing consumers (Queues) on top of topics.
-There might be other ways of achieving the same effect, e.g. through [virtual topics as in ActiveMQ](http://activemq.apache.org/virtual-destinations.html).
+There might be other ways of achieving the same effect, e.g. through [virtual topics as in ActiveMQ](https://activemq.apache.org/virtual-destinations.html).
 
 In order to create a new JMS provider, there are a some fundamental steps to be taken into account.
 

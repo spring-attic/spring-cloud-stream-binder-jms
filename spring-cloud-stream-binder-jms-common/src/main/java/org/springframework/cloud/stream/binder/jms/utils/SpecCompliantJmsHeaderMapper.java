@@ -30,7 +30,7 @@ import org.springframework.messaging.MessageHeaders;
  * Replace all header names that contain '-' with '_' due to JMS spec header name
  * constraints.
  *
- * See http://stackoverflow.com/a/30024766/2408961 for context.
+ * See https://stackoverflow.com/a/30024766/2408961 for context.
  *
  * @author Donovan Muller
  */
