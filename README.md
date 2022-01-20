@@ -1,3 +1,5 @@
+# spring-cloud-stream-binder-jms is no longer actively maintained by VMware, Inc.
+
 Spring Cloud Stream JMS Binder
 ------------------------------
 
