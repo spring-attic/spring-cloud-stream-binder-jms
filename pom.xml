@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>spring-cloud-stream-binder-jms-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0.BUILD-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <parent>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-build</artifactId>
-        <version>1.2.2.BUILD-SNAPSHOT</version>
+        <version>1.2.2.RELEASE</version>
     </parent>
 
     <modules>
@@ -25,7 +25,7 @@
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-stream-dependencies</artifactId>
-                <version>Chelsea.BUILD-SNAPSHOT</version>
+                <version>Chelsea.RELEASE</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
