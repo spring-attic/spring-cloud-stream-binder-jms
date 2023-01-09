@@ -15,18 +15,18 @@
  */
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import java.util.HashMap;
+
 import javax.jms.JMSException;
 import javax.jms.Message;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
-
 import org.springframework.integration.jms.JmsHeaderMapper;
 import org.springframework.messaging.MessageHeaders;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 /**
  * @author Donovan Muller
@@ -44,10 +44,10 @@ public class SpecCompliantJmsHeaderMapperTest {
 	public void mappingHeaders_whenIllegalCharacterInNameUsed_rewriteToBeCompliant() throws JMSException {
 		Message message = mock(Message.class);
 
-		jmsHeaderMapper.fromHeaders(new MessageHeaders(ImmutableMap.of(
-				"x-invalid-header-name", (Object) "test",
-				"x_valid_header_name",  "test"
-		)), message);
+		HashMap<String, Object> headers = new HashMap<>();
+		headers.put("x-invalid-header-name", "test");
+		headers.put("x_valid_header_name", "test");
+		jmsHeaderMapper.fromHeaders(new MessageHeaders(headers), message);
 
 		verify(message).setObjectProperty("x_invalid_header_name", "test");
 		verify(message).setObjectProperty("x_valid_header_name", "test");

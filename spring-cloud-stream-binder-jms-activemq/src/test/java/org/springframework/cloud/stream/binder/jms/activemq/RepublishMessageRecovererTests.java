@@ -16,29 +16,29 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
 import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
-
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 public class RepublishMessageRecovererTests {
 
@@ -46,7 +46,6 @@ public class RepublishMessageRecovererTests {
 	static RepublishMessageRecoverer target;
 	static RepublishMessageRecoverer additionalHeadersTarget;
 	static JmsTemplate jmsTemplate;
-	private Message message = createMessage(ImmutableMap.of("fancy", "header"));
 	private final String exceptionMessage = "I am an unhappy exception";
 	private Throwable cause = new RuntimeException(exceptionMessage);
 
@@ -74,12 +73,10 @@ public class RepublishMessageRecovererTests {
 //		verify(consumerDestination, times(1)).getDlq();
 //	}
 
-
-
 	@Test
 	public void recover_addsStacktraceToMessageHeaders() throws Exception {
-		target.recover(message, DEAD_LETTER_QUEUE, cause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_STACKTRACE), containsString(exceptionMessage));
 	}
@@ -88,8 +85,8 @@ public class RepublishMessageRecovererTests {
 	public void recover_whenCauseHasCause_addsSubcauseMessageToHeaders() throws Exception {
 		Throwable nestedCause = new RuntimeException("I am the parent", cause);
 
-		target.recover(message, DEAD_LETTER_QUEUE, nestedCause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, nestedCause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_MESSAGE), is(exceptionMessage));
 
@@ -97,31 +94,31 @@ public class RepublishMessageRecovererTests {
 
 	@Test
 	public void recover_addsCauseMessageToHeaders() throws Exception {
-		target.recover(message, DEAD_LETTER_QUEUE, cause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty(RepublishMessageRecoverer.X_EXCEPTION_MESSAGE), is(exceptionMessage));
 	}
 
 	@Test
 	public void recover_addsOriginalDestinationToMessageHeaders() throws Exception {
-		target.recover(message, DEAD_LETTER_QUEUE, cause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty(RepublishMessageRecoverer.X_ORIGINAL_QUEUE), is("queue://my-fancy-queue"));
 	}
 
 	@Test
 	public void recover_retainsExistingMessageProperties() throws Exception {
-		target.recover(message, DEAD_LETTER_QUEUE, cause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty("fancy"), is("header"));
 	}
 
 	@Test
 	public void recover_sendsMessageToDLQ() throws Exception {
-		target.recover(message, DEAD_LETTER_QUEUE, cause);
+		target.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
 
 		Object deadLetter = jmsTemplate.receiveAndConvert(DEAD_LETTER_QUEUE);
 		assertThat(deadLetter, Matchers.<Object>is("Amazing payload"));
@@ -129,18 +126,24 @@ public class RepublishMessageRecovererTests {
 
 	@Test
 	public void recover_whenAdditionalHeadersMethodProvided_addsDefinedHeaders() throws Exception {
-		additionalHeadersTarget.recover(message, DEAD_LETTER_QUEUE, cause);
-		message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+		additionalHeadersTarget.recover(createTestMessage(), DEAD_LETTER_QUEUE, cause);
+		Message message = jmsTemplate.receive(DEAD_LETTER_QUEUE);
 
 		assertThat(message.getStringProperty("additional"), is("extra-header"));
 	}
 
-	private Message createMessage(final ImmutableMap<String, String> headers) {
+	private Message createTestMessage() {
+		Map<String, String> headers = new HashMap<>();
+		headers.put("fancy", "header");
+		return createMessage(headers);
+	}
+
+	private Message createMessage(final Map<String, String> headers) {
 		jmsTemplate.send(new MessageCreator() {
 			@Override
 			public Message createMessage(Session session) throws JMSException {
 				TextMessage textMessage = session.createTextMessage("Amazing payload");
-				ImmutableSet<Map.Entry<String, String>> entries = headers.entrySet();
+				Set<Map.Entry<String, String>> entries = headers.entrySet();
 				for(Map.Entry<String, String> entry : entries){
 					try {
 						textMessage.setStringProperty(entry.getKey(), entry.getValue());
@@ -161,7 +164,9 @@ public class RepublishMessageRecovererTests {
 
 		@Override
 		protected Map<? extends String, ? extends Object> additionalHeaders(Message message, Throwable cause) {
-			return ImmutableMap.of("additional", "extra-header");
+			Map<String, Object> headers = new HashMap<>();
+			headers.put("additional", "extra-header");
+			return headers;
 		}
 	}
 

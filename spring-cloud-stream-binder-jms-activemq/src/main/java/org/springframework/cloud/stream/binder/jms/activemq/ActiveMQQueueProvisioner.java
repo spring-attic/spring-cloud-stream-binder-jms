@@ -19,6 +19,7 @@ package org.springframework.cloud.stream.binder.jms.activemq;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Queue;
@@ -26,8 +27,6 @@ import javax.jms.Session;
 import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.commons.lang.ArrayUtils;
-
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
@@ -47,6 +46,7 @@ import org.springframework.jms.support.JmsUtils;
  *
  * @author José Carlos Valero
  * @author Ilayaperumal Gopinathan
+ * @author Donovan Muller
  * @since 1.1
  */
 public class ActiveMQQueueProvisioner implements
@@ -120,7 +120,7 @@ public class ActiveMQQueueProvisioner implements
 	private Topic provisionTopic(String topicName) {
 		Connection activeMQConnection;
 		Session session;
-		Topic topic = null;
+		Topic topic;
 		try {
 			activeMQConnection = connectionFactory.createConnection();
 			session = activeMQConnection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
@@ -143,7 +143,7 @@ public class ActiveMQQueueProvisioner implements
 		try {
 			activeMQConnection = connectionFactory.createConnection();
 			session = activeMQConnection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
-			if (ArrayUtils.isNotEmpty(consumerGroupName)) {
+			if (consumerGroupName != null && consumerGroupName.length > 0) {
 				groups = new Queue[consumerGroupName.length];
 				for (int i = 0; i < consumerGroupName.length; i++) {
 					/*
