@@ -65,7 +65,7 @@ public class JmsBinderGlobalConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(MessageRecoverer.class)
 	MessageRecoverer defaultMessageRecoverer() throws Exception {
-		return new RepublishMessageRecoverer(jmsTemplate(), new SpecCompliantJmsHeaderMapper());
+		return new RepublishMessageRecoverer(p2pJmsTemplate(), new SpecCompliantJmsHeaderMapper());
 	}
 
 	@Bean
@@ -88,7 +88,17 @@ public class JmsBinderGlobalConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(JmsTemplate.class)
 	public JmsTemplate jmsTemplate() throws Exception {
-		return new JmsTemplate(connectionFactory);
+		final JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
+		jmsTemplate.setPubSubDomain(true);
+		return jmsTemplate;
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(name = "p2pJmsTemplate")
+	public JmsTemplate p2pJmsTemplate() throws Exception {
+		final JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
+		jmsTemplate.setPubSubDomain(false);
+		return jmsTemplate;
 	}
 
 
