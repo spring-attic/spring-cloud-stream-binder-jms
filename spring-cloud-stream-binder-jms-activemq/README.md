@@ -5,7 +5,7 @@ This module provides provisioning functionality as required by [spring-cloud-str
 
 ### How it works
 
-ActiveMQ allows creating the SCS model by using [virtual destinations](http://activemq.apache.org/virtual-destinations.html).
+ActiveMQ allows creating the SCS model by using [virtual destinations](https://activemq.apache.org/virtual-destinations.html).
 The effect is virtually the same as subscribing queues to topics.
 
 ### Compiling the module
