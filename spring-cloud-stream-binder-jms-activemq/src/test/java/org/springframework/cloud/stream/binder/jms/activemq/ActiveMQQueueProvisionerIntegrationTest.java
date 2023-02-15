@@ -29,8 +29,6 @@ import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
-import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.provisioning.ConsumerDestination;
 import org.springframework.cloud.stream.provisioning.ProducerDestination;
@@ -57,14 +55,13 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 
 	@Before
 	public void setUp() throws Exception {
-		target = new ActiveMQQueueProvisioner(activeMQConnectionFactory,
-				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
+		target = new ActiveMQQueueProvisioner(activeMQConnectionFactory);
 	}
 
 	@Test
 	public void provisionTopicAndConsumerGroup_whenSingleGroup_createsInfrastructure() throws Exception {
-		ProducerDestination producerDestination = target.provisionProducerDestination("topic", new ExtendedProducerProperties(new JmsProducerProperties()));
-		ConsumerDestination consumerDestination = target.provisionConsumerDestination("topic", "group1", new ExtendedConsumerProperties(new JmsConsumerProperties()));
+		ProducerDestination producerDestination = target.provisionProducerDestination("topic", new ExtendedProducerProperties<>(new JmsProducerProperties()));
+		ConsumerDestination consumerDestination = target.provisionConsumerDestination("topic", "group1", new ExtendedConsumerProperties<>(new JmsConsumerProperties()));
 
 		String dest = producerDestination.getName();
 		DestinationResolver destinationResolver = jmsTemplate.getDestinationResolver();
@@ -91,9 +88,9 @@ public class ActiveMQQueueProvisionerIntegrationTest {
 	@Test
 	public void provisionTopicAndConsumerGroup_whenMultipleGroups_createsInfrastructure() throws Exception {
 
-		ProducerDestination producerDestination = target.provisionProducerDestination("topic", new ExtendedProducerProperties(new JmsProducerProperties()));
-		ConsumerDestination consumerDestination1 = target.provisionConsumerDestination("topic", "group1", new ExtendedConsumerProperties(new JmsConsumerProperties()));
-		ConsumerDestination consumerDestination2 = target.provisionConsumerDestination("topic", "group2", new ExtendedConsumerProperties(new JmsConsumerProperties()));
+		ProducerDestination producerDestination = target.provisionProducerDestination("topic", new ExtendedProducerProperties<>(new JmsProducerProperties()));
+		ConsumerDestination consumerDestination1 = target.provisionConsumerDestination("topic", "group1", new ExtendedConsumerProperties<>(new JmsConsumerProperties()));
+		ConsumerDestination consumerDestination2 = target.provisionConsumerDestination("topic", "group2", new ExtendedConsumerProperties<>(new JmsConsumerProperties()));
 
 		String dest = producerDestination.getName();
 		DestinationResolver destinationResolver = jmsTemplate.getDestinationResolver();

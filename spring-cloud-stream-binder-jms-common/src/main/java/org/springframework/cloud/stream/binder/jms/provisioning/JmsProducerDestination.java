@@ -16,7 +16,7 @@
 
 package org.springframework.cloud.stream.binder.jms.provisioning;
 
-import java.util.Map;
+import java.util.List;
 
 import javax.jms.JMSException;
 import javax.jms.Topic;
@@ -29,19 +29,20 @@ import org.springframework.jms.support.JmsUtils;
  * An implementation of {@link ProducerDestination} for JMS.
  *
  * @author Donovan Muller
+ * @author Oleg Zhurakousky
  */
 public class JmsProducerDestination implements ProducerDestination {
 
-	private final Map<Integer, Topic> partitionTopics;
+	private final List<Topic> partitionTopics;
 
-    public JmsProducerDestination(Map<Integer, Topic> partitionTopics) {
+    public JmsProducerDestination(List<Topic> partitionTopics) {
 		this.partitionTopics = partitionTopics;
 	}
 
 	@Override
 	public String getName() {
 		try {
-			return partitionTopics.get(-1).getTopicName();
+			return partitionTopics.get(0).getTopicName();
 		}
 		catch (JMSException e) {
 			throw new ProvisioningException("Error getting topic name",

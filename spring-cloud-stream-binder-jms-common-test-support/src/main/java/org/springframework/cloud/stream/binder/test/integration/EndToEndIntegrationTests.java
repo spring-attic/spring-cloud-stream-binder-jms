@@ -16,36 +16,6 @@
 
 package org.springframework.cloud.stream.binder.test.integration;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ImmutableMap;
-import javax.jms.ConnectionFactory;
-import org.apache.commons.lang.ArrayUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import org.springframework.boot.Banner;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.cloud.stream.binder.ConsumerProperties;
-import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
-import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
-import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
-import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication;
-import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication.Receiver;
-import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication;
-import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication.Sender;
-import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.messaging.Message;
-
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -62,6 +32,37 @@ import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInA
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.springframework.cloud.stream.binder.test.TestUtils.waitFor;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.jms.ConnectionFactory;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.springframework.boot.Banner;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
+import org.springframework.cloud.stream.binder.ProducerProperties;
+import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
+import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication;
+import org.springframework.cloud.stream.binder.test.integration.receiver.ReceiverApplication.Receiver;
+import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication;
+import org.springframework.cloud.stream.binder.test.integration.sender.SenderApplication.Sender;
+import org.springframework.cloud.stream.provisioning.ProvisioningProvider;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.messaging.Message;
 
 public abstract class EndToEndIntegrationTests {
 
@@ -196,7 +197,9 @@ public abstract class EndToEndIntegrationTests {
 		Sender sender = createSender();
 		Receiver receiver = createReceiver(randomGroupArg1);
 
-		sender.send(MESSAGE_TEXTS[1], ImmutableMap.<String, Object>of(HEADER_KEY, HEADER_VALUE));
+		Map<String, Object> headers = new HashMap<>();
+		headers.put(HEADER_KEY, HEADER_VALUE);
+		sender.send(MESSAGE_TEXTS[1], headers);
 
 		final List<Message> messages = receiver.getHandledMessages();
 
@@ -218,7 +221,9 @@ public abstract class EndToEndIntegrationTests {
 		Sender sender = createSender();
 		Receiver receiver = createReceiver(randomGroupArg1);
 
-		sender.send(MESSAGE_TEXTS[1], ImmutableMap.<String, Object>of(INVALID_HEADER_KEY, HEADER_VALUE));
+		Map<String, Object> headers = new HashMap<>();
+		headers.put(INVALID_HEADER_KEY, HEADER_VALUE);
+		sender.send(MESSAGE_TEXTS[1], headers);
 
 		final List<Message> messages = receiver.getHandledMessages();
 
@@ -240,10 +245,12 @@ public abstract class EndToEndIntegrationTests {
 		String group42 = getRandomName("group42");
 		Sender sender = createSender(String.format(REQUIRED_GROUPS_FORMAT, group42));
 
-		sender.send(MESSAGE_TEXTS[2]);
+
 
 		Receiver receiver = createReceiver(String.format(INPUT_GROUP_FORMAT, group42));
 		final List<Message> messages = receiver.getHandledMessages();
+
+		sender.send(MESSAGE_TEXTS[2]);
 
 
 		waitFor(new Runnable() {
@@ -373,9 +380,7 @@ public abstract class EndToEndIntegrationTests {
 		);
 
 		int messageCount = 39;
-		for (int i = 0; i < messageCount; i++) {
-			sender.send(i);
-		}
+
 
 		Receiver receiverPartition0 = createReceiver(
 				String.format(INPUT_GROUP_FORMAT, group66),
@@ -389,6 +394,10 @@ public abstract class EndToEndIntegrationTests {
 				String.format("--spring.cloud.stream.instance-count=%s", 2),
 				String.format("--spring.cloud.stream.bindings.input.consumer.partitioned=%s", true)
 		);
+
+		for (int i = 0; i < messageCount; i++) {
+			sender.send(i);
+		}
 
 		final List<Message> messagesPartition0 = receiverPartition0.getHandledMessages();
 		final List<Message> messagesPartition1 = receiverPartition1.getHandledMessages();
@@ -466,11 +475,12 @@ public abstract class EndToEndIntegrationTests {
 	}
 
 	private String[] applicationArguments(String destinationArg, String[] arguments) {
-		return (String[]) ArrayUtils.addAll(arguments, new String[]{
-				destinationArg,
-				"--logging.level.org.springframework=WARN",
-				"--logging.level.org.springframework.boot=WARN"
-		});
+		List<String> applicationArguments = new ArrayList<>(Arrays.asList(arguments));
+		applicationArguments.add(destinationArg);
+		applicationArguments.add("--logging.level.org.springframework=WARN");
+		applicationArguments.add("--logging.level.org.springframework.boot=WARN");
+
+		return applicationArguments.toArray(new String[applicationArguments.size()]);
 	}
 
 	private List<String> extractStringPayload(Iterable<Message> messages) {
@@ -494,9 +504,10 @@ public abstract class EndToEndIntegrationTests {
 	}
 
 	public static class SerializableTest implements Serializable {
-		public final String value;
 
-		public SerializableTest(String value) {
+		private final String value;
+
+		private SerializableTest(String value) {
 			this.value = value;
 		}
 

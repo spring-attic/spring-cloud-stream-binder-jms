@@ -17,19 +17,14 @@
 package org.springframework.cloud.stream.binder.jms.activemq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-
 import org.springframework.cloud.stream.binder.AbstractBinderTests;
-import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
 import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
-import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
-import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
 import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
@@ -42,6 +37,7 @@ import org.springframework.jms.core.JmsTemplate;
 /**
  * @author Ilayaperumal Gopinathan
  * @author Gary Russell
+ * @author Oleg Zhurakousky
  */
 public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder, ExtendedConsumerProperties<JmsConsumerProperties>,
 		ExtendedProducerProperties<JmsProducerProperties>> {
@@ -49,8 +45,7 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 	@Override
 	protected ActiveMQTestBinder getBinder() throws Exception {
 		ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory,
-				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
+		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory);
 		GenericApplicationContext applicationContext = new GenericApplicationContext();
 		applicationContext.refresh();
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
@@ -75,13 +70,13 @@ public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder,
 	}
 
 	@Override
-	protected ExtendedConsumerProperties createConsumerProperties() {
-		return new ExtendedConsumerProperties(new JmsConsumerProperties());
+	protected ExtendedConsumerProperties<JmsConsumerProperties> createConsumerProperties() {
+		return new ExtendedConsumerProperties<>(new JmsConsumerProperties());
 	}
 
 	@Override
-	protected ExtendedProducerProperties createProducerProperties() {
-		return new ExtendedProducerProperties(new JmsProducerProperties());
+	protected ExtendedProducerProperties<JmsProducerProperties> createProducerProperties() {
+		return new ExtendedProducerProperties<>(new JmsProducerProperties());
 	}
 
 	@Override
