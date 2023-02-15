@@ -11,22 +11,20 @@
 
     <artifactId>spring-cloud-stream-binder-jms-activemq-test-support</artifactId>
 
-    <properties>
-        <activemq.version>5.14.0</activemq.version>
-    </properties>
-
     <dependencies>
-
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-broker</artifactId>
-            <version>${activemq.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-client</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-kahadb-store</artifactId>
-            <version>${activemq.version}</version>
         </dependency>
     </dependencies>
 

@@ -16,34 +16,42 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq.integration;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.springframework.cloud.stream.binder.jms.activemq.ActiveMQQueueProvisioner;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
 
+import javax.jms.ConnectionFactory;
+
 /**
  * @author José Carlos Valero
+ * @author Tim Ysewyn
  * @since 1.1
  */
 public class EndToEndIntegrationTests extends org.springframework.cloud.stream.binder.test.integration.EndToEndIntegrationTests {
-	private static ActiveMQConnectionFactory connectionFactory;
 
-	static {
-		try {
-			connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+	private static ActiveMQTestUtils activeMQTestUtils;
+	private static ConnectionFactory connectionFactory;
 
-	public EndToEndIntegrationTests() throws Exception {
+	public EndToEndIntegrationTests() {
 		super(
 				new ActiveMQQueueProvisioner(connectionFactory,
 						new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous."))),
 				connectionFactory
 		);
+	}
+
+	@BeforeClass
+	public static void setup() throws Exception {
+		activeMQTestUtils = new ActiveMQTestUtils();
+		connectionFactory = activeMQTestUtils.getConnectionFactory();
+	}
+
+	@AfterClass
+	public static void teardown() throws Exception {
+		activeMQTestUtils.stopEmbeddedActiveMQServer();
 	}
 
 }

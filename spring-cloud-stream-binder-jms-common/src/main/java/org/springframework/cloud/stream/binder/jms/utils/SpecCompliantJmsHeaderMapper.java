@@ -16,7 +16,9 @@
 
 package org.springframework.cloud.stream.binder.jms.utils;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.jms.Message;
@@ -33,26 +35,41 @@ import org.springframework.messaging.MessageHeaders;
  * See http://stackoverflow.com/a/30024766/2408961 for context.
  *
  * @author Donovan Muller
+ * @author Tim Ysewyn
  */
 public class SpecCompliantJmsHeaderMapper extends DefaultJmsHeaderMapper {
 
 	private static final Logger logger = LoggerFactory
 			.getLogger(SpecCompliantJmsHeaderMapper.class);
 
+	private static List<Class<?>> SUPPORTED_PROPERTY_TYPES = Arrays.asList(new Class<?>[] {
+			Boolean.class, Byte.class, Double.class, Float.class, Integer.class, Long.class, Short.class, String.class });
+
 	@Override
 	public void fromHeaders(MessageHeaders headers, Message jmsMessage) {
 		Map<String, Object> compliantHeaders = new HashMap<>(headers.size());
 		for (Map.Entry<String, Object> entry : headers.entrySet()) {
+			Object value = entry.getValue();
+			if (!SUPPORTED_PROPERTY_TYPES.contains(value.getClass())) {
+				logger.trace("Rewriting header value '{}' to conform to JMS spec", value);
+				value = value.toString();
+			}
 			if (entry.getKey().contains("-")) {
 				String key = entry.getKey().replaceAll("-", "_");
 				logger.trace("Rewriting header name '{}' to conform to JMS spec", key);
-				compliantHeaders.put(key, entry.getValue());
+				compliantHeaders.put(key, value);
 			}
 			else {
-				compliantHeaders.put(entry.getKey(), entry.getValue());
+				compliantHeaders.put(entry.getKey(), value);
 			}
 		}
 
 		super.fromHeaders(new MessageHeaders(compliantHeaders), jmsMessage);
 	}
+
+	@Override
+	public Map<String, Object> toHeaders(Message jmsMessage) {
+		return super.toHeaders(jmsMessage);
+	}
+
 }

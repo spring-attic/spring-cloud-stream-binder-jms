@@ -16,13 +16,11 @@
 
 package org.springframework.cloud.stream.binder.jms.activemq;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.springframework.cloud.stream.binder.AbstractBinderTests;
-import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedConsumerProperties;
 import org.springframework.cloud.stream.binder.ExtendedProducerProperties;
-import org.springframework.cloud.stream.binder.ProducerProperties;
 import org.springframework.cloud.stream.binder.Spy;
 import org.springframework.cloud.stream.binder.jms.JMSMessageChannelBinder;
 import org.springframework.cloud.stream.binder.jms.config.JmsConsumerProperties;
@@ -30,44 +28,59 @@ import org.springframework.cloud.stream.binder.jms.config.JmsProducerProperties;
 import org.springframework.cloud.stream.binder.jms.test.ActiveMQTestUtils;
 import org.springframework.cloud.stream.binder.jms.utils.Base64UrlNamingStrategy;
 import org.springframework.cloud.stream.binder.jms.utils.DestinationNameResolver;
-import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenChannelAdapterFactory;
+import org.springframework.cloud.stream.binder.jms.utils.JmsMessageDrivenEndpointFactory;
 import org.springframework.cloud.stream.binder.jms.utils.JmsSendingMessageHandlerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.ListenerContainerFactory;
 import org.springframework.cloud.stream.binder.jms.utils.MessageRecoverer;
 import org.springframework.cloud.stream.binder.jms.utils.RepublishMessageRecoverer;
+import org.springframework.cloud.stream.binder.jms.utils.SpecCompliantJmsHeaderMapper;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.integration.jms.DefaultJmsHeaderMapper;
 import org.springframework.jms.core.JmsTemplate;
+
+import javax.jms.ConnectionFactory;
 
 /**
  * @author Ilayaperumal Gopinathan
  * @author Gary Russell
+ * @author Tim Ysewyn
  */
 public class ActiveMQBinderTests extends AbstractBinderTests<ActiveMQTestBinder, ExtendedConsumerProperties<JmsConsumerProperties>,
 		ExtendedProducerProperties<JmsProducerProperties>> {
 
+	private static ActiveMQTestUtils activeMQTestUtils;
+
+	@BeforeClass
+	public static void setup() {
+		activeMQTestUtils = new ActiveMQTestUtils();
+	}
+
+	@AfterClass
+	public static void teardown() throws Exception {
+		activeMQTestUtils.stopEmbeddedActiveMQServer();
+	}
+
 	@Override
 	protected ActiveMQTestBinder getBinder() throws Exception {
-		ActiveMQConnectionFactory connectionFactory = ActiveMQTestUtils.startEmbeddedActiveMQServer();
+		ConnectionFactory connectionFactory = activeMQTestUtils.getConnectionFactory();
 		ActiveMQQueueProvisioner queueProvisioner = new ActiveMQQueueProvisioner(connectionFactory,
 				new DestinationNameResolver(new Base64UrlNamingStrategy("anonymous.")));
 		GenericApplicationContext applicationContext = new GenericApplicationContext();
 		applicationContext.refresh();
 		JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
 		JmsSendingMessageHandlerFactory jmsSendingMessageHandlerFactory = new JmsSendingMessageHandlerFactory(
-				jmsTemplate, new DefaultJmsHeaderMapper());
+				jmsTemplate, new SpecCompliantJmsHeaderMapper());
 		jmsSendingMessageHandlerFactory.setApplicationContext(applicationContext);
 		jmsSendingMessageHandlerFactory.setBeanFactory(applicationContext.getBeanFactory());
 		ListenerContainerFactory listenerContainerFactory = new ListenerContainerFactory(connectionFactory);
 		MessageRecoverer messageRecoverer = new RepublishMessageRecoverer(jmsTemplate,
-				new DefaultJmsHeaderMapper());
-		JmsMessageDrivenChannelAdapterFactory jmsMessageDrivenChannelAdapterFactory = new JmsMessageDrivenChannelAdapterFactory(
-				listenerContainerFactory, messageRecoverer);
-		jmsMessageDrivenChannelAdapterFactory.setApplicationContext(applicationContext);
-		jmsMessageDrivenChannelAdapterFactory.setBeanFactory(applicationContext.getBeanFactory());
+				new SpecCompliantJmsHeaderMapper());
+		JmsMessageDrivenEndpointFactory jmsMessageDrivenEndpointFactory = new JmsMessageDrivenEndpointFactory(
+				listenerContainerFactory, messageRecoverer, new SpecCompliantJmsHeaderMapper());
+		jmsMessageDrivenEndpointFactory.setApplicationContext(applicationContext);
+		jmsMessageDrivenEndpointFactory.setBeanFactory(applicationContext.getBeanFactory());
 		JMSMessageChannelBinder binder = new JMSMessageChannelBinder(queueProvisioner,
 				jmsSendingMessageHandlerFactory,
-				jmsMessageDrivenChannelAdapterFactory, jmsTemplate, connectionFactory);
+				jmsMessageDrivenEndpointFactory, jmsTemplate, connectionFactory);
 		binder.setApplicationContext(applicationContext);
 		ActiveMQTestBinder testBinder = new ActiveMQTestBinder();
 		testBinder.setBinder(binder);
